@@ -1,0 +1,27 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+
+# Simulation Outputs
+logs/
+outputs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Distribution
+build/
+dist/
+*.egg-info/

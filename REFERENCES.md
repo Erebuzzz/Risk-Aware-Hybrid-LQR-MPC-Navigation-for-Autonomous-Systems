@@ -51,8 +51,8 @@ Academic references for theoretical foundations and implementation decisions.
 | Resource | Access | Used For |
 |----------|--------|----------|
 | arXiv API | [api.arxiv.org](https://info.arxiv.org/help/api/index.html) | Paper search |
-| Elsevier ScienceDirect | API Key: `b78fa2f9...` | Journal access |
-| OpenAlex | API Key: `KIwn9iHd...` | Academic metadata |
+| Elsevier ScienceDirect | API Key: `[REDACTED]` | Journal access |
+| OpenAlex | API Key: `[REDACTED]` | Academic metadata |
 
 ---
 
