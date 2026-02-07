@@ -1,0 +1,20 @@
+[2026-02-08 00:44:14.884] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260208_004414.log
+[2026-02-08 00:44:15.479] [INFO] [mpc_sim] k=25 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:15.608] [INFO] [mpc_sim] k=30 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:15.699] [INFO] [mpc_sim] k=35 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:15.811] [INFO] [mpc_sim] k=40 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:16.006] [INFO] [mpc_sim] k=45 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:16.096] [INFO] [mpc_sim] k=50 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:16.216] [INFO] [mpc_sim] k=55 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:16.299] [INFO] [mpc_sim] k=60 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:16.387] [INFO] [mpc_sim] k=65 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:25.413] [INFO] [mpc_sim] k=580 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:25.497] [INFO] [mpc_sim] k=585 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:25.614] [INFO] [mpc_sim] k=590 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:25.696] [INFO] [mpc_sim] k=595 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:25.849] [INFO] [mpc_sim] k=600 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:44:32.602] [INFO] [mpc_sim] Simulation completed | total_entries=2012 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260208_004414 | max_error_norm=1.256855313133004 | mean_error_norm=0.1783718806212088 | final_error_norm=0.08151896140505394
+[2026-02-08 00:44:32.617] [INFO] [mpc_sim] State history exported to logs\states_20260208_004414.csv
+[2026-02-08 00:44:32.626] [INFO] [mpc_sim] Control history exported to logs\controls_20260208_004414.csv
+[2026-02-08 00:44:32.826] [INFO] [mpc_sim] Logs exported to logs\simulation_20260208_004414.json
+[2026-02-08 00:44:32.826] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2012, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260208_004414', 'max_error_norm': 1.256855313133004, 'mean_error_norm': 0.1783718806212088, 'final_error_norm': 0.08151896140505394}

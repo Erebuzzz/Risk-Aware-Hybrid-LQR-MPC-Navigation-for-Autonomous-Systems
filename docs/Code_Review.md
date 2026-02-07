@@ -608,6 +608,50 @@ u_fallback = u_refs[0] - K_p @ error
 
 ---
 
+##### Advanced Features (v0.3.0)
+
+**1. Move-Blocking:**
+Reduces computational complexity by holding control inputs constant over multiple time steps.
+- `block_size`: Number of steps to hold control constant
+- Reduces decision variables from $N \times m$ to $\lceil N/B \rceil \times m$
+- Significantly reduces solve time (e.g., 135ms → 35ms)
+
+**2. Cold-Start Handling:**
+Mitigates heading spikes when starting from rest:
+- `reset()`: Clears internal state history
+- **Ramp-up**: Limits angular velocity during first $N$ steps to prevent aggressive corrections due to linearization errors at low speeds.
+
+---
+
+### 3.3 yaw_stabilizer.py (New in v0.3.0)
+
+**Location:** `src/hybrid_controller/hybrid_controller/controllers/yaw_stabilizer.py`
+
+Implements a dedicated PID controller for heading stabilization during critical transients.
+
+#### Class: `YawStabilizer`
+
+##### `__init__(self, kp, ki, kd, dt, omega_max)`
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `kp` | 2.0 | Proportional gain |
+| `ki` | 0.0 | Integral gain |
+| `kd` | 0.1 | Derivative gain |
+
+##### `compute(self, current_yaw, target_yaw, feedforward_omega)`
+
+**Control Law:**
+$$e_\theta = \text{normalize}(\theta_{target} - \theta_{current})$$
+$$\omega_{cmd} = K_p e_\theta + K_i \int e_\theta + K_d \dot{e}_\theta + \omega_{ff}$$
+
+**Features:**
+- **Derivative Smoothing**: Uses low-pass filter on derivative term
+- **Anti-Windup**: Clamps integral term
+- **Angle Wrapping**: Handles $\pm \pi$ discontinuities correctly
+
+---
+
 ## 4. Trajectory Module
 
 ### 4.1 reference_generator.py

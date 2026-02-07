@@ -1,0 +1,36 @@
+[2026-02-08 00:28:09.201] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260208_002809.log
+[2026-02-08 00:28:09.997] [INFO] [mpc_sim] k=25 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.109] [INFO] [mpc_sim] k=30 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.221] [INFO] [mpc_sim] k=35 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.365] [INFO] [mpc_sim] k=40 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.474] [INFO] [mpc_sim] k=45 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.583] [INFO] [mpc_sim] k=50 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.811] [INFO] [mpc_sim] k=60 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:10.943] [INFO] [mpc_sim] k=65 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.005] [INFO] [mpc_sim] k=560 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.212] [INFO] [mpc_sim] k=565 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.404] [INFO] [mpc_sim] k=570 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.539] [INFO] [mpc_sim] k=575 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.680] [INFO] [mpc_sim] k=580 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.860] [INFO] [mpc_sim] k=585 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:26.974] [INFO] [mpc_sim] k=590 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:27.122] [INFO] [mpc_sim] k=595 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:27.271] [INFO] [mpc_sim] k=600 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:27.499] [INFO] [mpc_sim] k=605 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:27.635] [INFO] [mpc_sim] k=610 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:28.775] [INFO] [mpc_sim] k=645 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:28.925] [INFO] [mpc_sim] k=650 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:29.109] [INFO] [mpc_sim] k=655 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:29.239] [INFO] [mpc_sim] k=660 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:29.368] [INFO] [mpc_sim] k=665 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:29.536] [INFO] [mpc_sim] k=670 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:29.686] [INFO] [mpc_sim] k=675 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:29.834] [INFO] [mpc_sim] k=680 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:30.025] [INFO] [mpc_sim] k=685 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:30.189] [INFO] [mpc_sim] k=690 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:30.323] [INFO] [mpc_sim] k=695 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:40.012] [INFO] [mpc_sim] Simulation completed | total_entries=2028 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260208_002809 | max_error_norm=1.1335701411364398 | mean_error_norm=0.28865978705680495 | final_error_norm=0.12779183533823082
+[2026-02-08 00:28:40.026] [INFO] [mpc_sim] State history exported to logs\states_20260208_002809.csv
+[2026-02-08 00:28:40.034] [INFO] [mpc_sim] Control history exported to logs\controls_20260208_002809.csv
+[2026-02-08 00:28:40.243] [INFO] [mpc_sim] Logs exported to logs\simulation_20260208_002809.json
+[2026-02-08 00:28:40.245] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2028, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260208_002809', 'max_error_norm': 1.1335701411364398, 'mean_error_norm': 0.28865978705680495, 'final_error_norm': 0.12779183533823082}
