@@ -47,9 +47,9 @@ def run_lqr_simulation(duration: float = 20.0, dt: float = 0.02,
     print("=" * 60)
     
     # Initialize components
-    robot = DifferentialDriveRobot(v_max=1.0, omega_max=1.5)
+    robot = DifferentialDriveRobot(v_max=2.0, omega_max=3.0)  # Increased limits to prevent saturation
     traj_gen = ReferenceTrajectoryGenerator(A=2.0, a=0.5, dt=dt)
-    lqr = LQRController(Q_diag=[10.0, 10.0, 1.0], R_diag=[0.1, 0.1], dt=dt)
+    lqr = LQRController(Q_diag=[15.0, 15.0, 8.0], R_diag=[0.1, 0.1], dt=dt, v_max=2.0, omega_max=3.0)
     logger = SimulationLogger(log_dir='logs', log_level='INFO', node_name='lqr_sim')
     
     # Generate reference trajectory
@@ -58,8 +58,9 @@ def run_lqr_simulation(duration: float = 20.0, dt: float = 0.02,
     
     print(f"Generated {N} trajectory points over {duration}s")
     
-    # Initialize state (start at origin, slightly off from reference)
-    x = np.array([0.0, 0.0, 0.0])
+    # Initialize state at the reference trajectory's starting point
+    x_ref_init, _ = traj_gen.get_reference_at_index(0)
+    x = x_ref_init.copy()  # Start at reference position and heading
     
     # Storage
     states = np.zeros((N, 3))
@@ -152,16 +153,18 @@ def run_mpc_simulation(duration: float = 20.0, dt: float = 0.02,
     print("=" * 60)
     
     # Initialize components
-    robot = DifferentialDriveRobot(v_max=1.0, omega_max=1.5)
+    robot = DifferentialDriveRobot(v_max=2.0, omega_max=3.0)
     traj_gen = ReferenceTrajectoryGenerator(A=2.0, a=0.5, dt=dt)
     mpc = MPCController(
         horizon=10,
-        Q_diag=[10.0, 10.0, 1.0],
+        Q_diag=[15.0, 15.0, 8.0],
         R_diag=[0.1, 0.1],
-        P_diag=[20.0, 20.0, 2.0],
+        P_diag=[30.0, 30.0, 5.0],
         d_safe=0.3,
         slack_penalty=1000.0,
         dt=dt,
+        v_max=2.0,
+        omega_max=3.0,
         solver='ECOS'
     )
     logger = SimulationLogger(log_dir='logs', log_level='INFO', node_name='mpc_sim')
@@ -183,8 +186,9 @@ def run_mpc_simulation(duration: float = 20.0, dt: float = 0.02,
     
     print(f"Generated {N} trajectory points over {duration}s")
     
-    # Initialize state
-    x = np.array([0.0, 0.0, 0.0])
+    # Initialize state at the reference trajectory's starting point
+    x_ref_init, _ = traj_gen.get_reference_at_index(0)
+    x = x_ref_init.copy()  # Start at reference position and heading
     
     # Storage
     states = np.zeros((N, 3))
@@ -203,7 +207,7 @@ def run_mpc_simulation(duration: float = 20.0, dt: float = 0.02,
         
         # Compute MPC control at lower rate
         if k % mpc_rate == 0:
-            solution = mpc.solve(x, x_refs, u_refs, obstacles)
+            solution = mpc.solve_with_ltv(x, x_refs, u_refs, obstacles)
             solve_times.append(solution.solve_time_ms)
             
             if solution.slack_used:
@@ -302,13 +306,14 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
     
     # Run LQR (without visibility of obstacles)
     print("\n--- Running LQR (obstacle-unaware) ---")
-    robot = DifferentialDriveRobot()
+    robot = DifferentialDriveRobot(v_max=2.0, omega_max=3.0)
     traj_gen = ReferenceTrajectoryGenerator(A=2.0, a=0.5, dt=dt)
-    lqr = LQRController(dt=dt)
+    lqr = LQRController(Q_diag=[15.0, 15.0, 8.0], R_diag=[0.1, 0.1], dt=dt, v_max=2.0, omega_max=3.0)
     trajectory = traj_gen.generate(duration)
     N = len(trajectory)
     
-    x_lqr = np.array([0.0, 0.0, 0.0])
+    x_ref_init, _ = traj_gen.get_reference_at_index(0)
+    x_lqr = x_ref_init.copy()
     lqr_states = np.zeros((N, 3))
     lqr_states[0] = x_lqr
     
@@ -327,15 +332,17 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
     # Run MPC (obstacle-aware)
     print("\n--- Running MPC (obstacle-aware) ---")
     traj_gen.generate(duration)  # Reset
-    mpc = MPCController(horizon=10, d_safe=0.3, dt=dt)
+    mpc = MPCController(horizon=10, Q_diag=[15.0, 15.0, 8.0], R_diag=[0.1, 0.1], 
+                       P_diag=[30.0, 30.0, 5.0], d_safe=0.3, dt=dt, 
+                       v_max=2.0, omega_max=3.0)
     
-    x_mpc = np.array([0.0, 0.0, 0.0])
+    x_mpc = x_ref_init.copy()  # Use same initial state as LQR
     mpc_states = np.zeros((N, 3))
     mpc_states[0] = x_mpc
     
     for k in range(N - 1):
         x_refs, u_refs = traj_gen.get_trajectory_segment(k, mpc.N + 1)
-        solution = mpc.solve(x_mpc, x_refs, u_refs, obstacles)
+        solution = mpc.solve_with_ltv(x_mpc, x_refs, u_refs, obstacles)
         x_mpc = robot.simulate_step(x_mpc, solution.optimal_control, dt)
         mpc_states[k + 1] = x_mpc
     

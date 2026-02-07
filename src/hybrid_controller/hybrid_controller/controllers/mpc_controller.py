@@ -336,29 +336,25 @@ class MPCController:
                        u_refs: np.ndarray, obstacles: List[Obstacle] = None,
                        use_soft_constraints: bool = True) -> MPCSolution:
         """
-        Solve MPC with Linear Time-Varying (LTV) dynamics.
+        Solve MPC with Linear Time-Varying (LTV) dynamics using Error Formulation.
         
-        Uses different linearization points at each time step for
-        more accurate prediction along curved trajectories.
+        Formulation:
+            min Σ ||dx_k||_Q + ||u_k||_R
+            s.t. dx_{k+1} = A_d·dx_k + B_d·du_k
         
-        Args:
-            x0: Initial state
-            x_refs: Reference states (N+1, 3)
-            u_refs: Reference controls (N, 2)
-            obstacles: List of obstacles
-            use_soft_constraints: Enable slack variables
-            
-        Returns:
-            MPCSolution with optimal control
+        where:
+            dx_k = x_k - x_{ref,k}
+            du_k = u_k - u_{ref,k}
+            u_k = u_{ref,k} + du_k
         """
         start_time = time.perf_counter()
         
         if obstacles is None:
             obstacles = []
         
-        # Decision variables
-        x = cp.Variable((self.N + 1, self.nx))
-        u = cp.Variable((self.N, self.nu))
+        # Decision variables: Deviations from reference
+        dx = cp.Variable((self.N + 1, self.nx))
+        du = cp.Variable((self.N, self.nu))
         
         # Slack variables
         if use_soft_constraints and len(obstacles) > 0:
@@ -368,59 +364,85 @@ class MPCController:
         
         # Objective
         cost = 0
-        for k in range(self.N):
-            state_error = x[k] - x_refs[k]
-            cost += cp.quad_form(state_error, self.Q)
-            cost += cp.quad_form(u[k], self.R)
         
-        terminal_error = x[self.N] - x_refs[min(self.N, len(x_refs)-1)]
-        cost += cp.quad_form(terminal_error, self.P)
+        # Unwrap reference orientation to ensure continuity
+        x_refs_unwrapped = x_refs.copy()
+        x_refs_unwrapped[:, 2] = np.unwrap(x_refs[:, 2])
+        
+        # Adjust initial state theta to match the reference domain (avoid 2pi jump)
+        # We want (x0_theta - ref_theta) to be in [-pi, pi]
+        theta_ref_0 = x_refs_unwrapped[0, 2]
+        diff = x0[2] - theta_ref_0
+        diff_norm = self._normalize_angle(diff)
+        x0_adjusted = x0.copy()
+        x0_adjusted[2] = theta_ref_0 + diff_norm
+        
+        for k in range(self.N):
+            # Penalize state error (dx)
+            cost += cp.quad_form(dx[k], self.Q)
+            
+            # Penalize total control effort (u = u_ref + du)
+            u_k = u_refs[k] + du[k]
+            cost += cp.quad_form(u_k, self.R)
+        
+        # Terminal cost
+        cost += cp.quad_form(dx[self.N], self.P)
         
         if slack is not None:
             cost += self.slack_penalty * cp.sum_squares(slack)
         
         # Constraints
-        constraints = [x[0] == x0]
+        constraints = []
         
-        # LTV dynamics - different A_d, B_d at each step
+        # Initial condition: dx_0 = x0_adjusted - x_refs[0]
+        constraints.append(dx[0] == x0_adjusted - x_refs_unwrapped[0])
+        
+        # LTV dynamics: dx_{k+1} = A_d dx_k + B_d du_k
         for k in range(self.N):
             v_r = u_refs[k, 0] if abs(u_refs[k, 0]) > 0.01 else 0.1
-            theta_r = x_refs[k, 2]
+            theta_r = x_refs_unwrapped[k, 2]
             A_d, B_d = self.linearizer.get_discrete_model_explicit(v_r, theta_r)
-            constraints.append(x[k + 1] == A_d @ x[k] + B_d @ u[k])
+            constraints.append(dx[k + 1] == A_d @ dx[k] + B_d @ du[k])
         
-        # Actuator constraints
+        # Actuator constraints on TOTAL control u = u_ref + du
         for k in range(self.N):
-            constraints.append(u[k, 0] >= -self.v_max)
-            constraints.append(u[k, 0] <= self.v_max)
-            constraints.append(u[k, 1] >= -self.omega_max)
-            constraints.append(u[k, 1] <= self.omega_max)
+            u_total = u_refs[k] + du[k]
+            constraints.append(u_total[0] >= -self.v_max)
+            constraints.append(u_total[0] <= self.v_max)
+            constraints.append(u_total[1] >= -self.omega_max)
+            constraints.append(u_total[1] <= self.omega_max)
         
-        # Obstacle constraints
+        # Obstacle constraints on TOTAL state x = x_ref + dx
         slack_idx = 0
         for obs in obstacles:
             for k in range(self.N):
-                px_lin = x_refs[k, 0]
-                py_lin = x_refs[k, 1]
-                dx = px_lin - obs.x
-                dy = py_lin - obs.y
-                dist = np.sqrt(dx**2 + dy**2)
+                # Current linearization point
+                px_lin = x_refs_unwrapped[k, 0]
+                py_lin = x_refs_unwrapped[k, 1]
+                
+                dx_obs = px_lin - obs.x
+                dy_obs = py_lin - obs.y
+                dist = np.sqrt(dx_obs**2 + dy_obs**2)
                 
                 if dist > 0.01:
-                    nx, ny = dx / dist, dy / dist
+                    nx, ny = dx_obs / dist, dy_obs / dist
                     safe_dist = self.d_safe + obs.radius
                     
+                    # Constraint: n·(p - p_obs) ≥ safe_dist
+                    # p = p_ref + dp
+                    # n·(p_ref + dp - p_obs) ≥ safe_dist
+                    
+                    # Predicted position deviation
+                    dpx = dx[k, 0]
+                    dpy = dx[k, 1]
+                    
+                    lhs = nx * (px_lin + dpx - obs.x) + ny * (py_lin + dpy - obs.y)
+                    
                     if slack is not None:
-                        constraints.append(
-                            nx * (x[k, 0] - obs.x) + ny * (x[k, 1] - obs.y)
-                            >= safe_dist - slack[slack_idx]
-                        )
+                        constraints.append(lhs >= safe_dist - slack[slack_idx])
                         slack_idx += 1
                     else:
-                        constraints.append(
-                            nx * (x[k, 0] - obs.x) + ny * (x[k, 1] - obs.y)
-                            >= safe_dist
-                        )
+                        constraints.append(lhs >= safe_dist)
         
         # Solve
         problem = cp.Problem(cp.Minimize(cost), constraints)
@@ -438,14 +460,21 @@ class MPCController:
         if problem.status in [cp.OPTIMAL, cp.OPTIMAL_INACCURATE]:
             slack_used = slack is not None and slack.value is not None and np.any(slack.value > 1e-6)
             
-            self._prev_solution = u.value
-            self._prev_states = x.value
+            # Reconstruct absolute states and controls
+            dx_val = dx.value
+            du_val = du.value
+            
+            x_pred = x_refs[:self.N+1] + dx_val
+            u_pred = u_refs[:self.N] + du_val
+            
+            self._prev_solution = u_pred
+            self._prev_states = x_pred
             
             return MPCSolution(
                 status="optimal",
-                optimal_control=u.value[0],
-                control_sequence=u.value,
-                predicted_states=x.value,
+                optimal_control=u_pred[0],
+                control_sequence=u_pred,
+                predicted_states=x_pred,
                 cost=problem.value,
                 solve_time_ms=solve_time,
                 slack_used=slack_used,
