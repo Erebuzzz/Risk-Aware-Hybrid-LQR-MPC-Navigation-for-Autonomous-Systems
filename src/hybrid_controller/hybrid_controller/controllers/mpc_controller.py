@@ -88,9 +88,10 @@ class MPCController:
     
     def __init__(self, horizon: int = 10, 
                  Q_diag: list = None, R_diag: list = None, P_diag: list = None,
-                 d_safe: float = 0.3, slack_penalty: float = 1000.0,
+                 d_safe: float = 0.3, slack_penalty: float = 5000.0,
                  v_max: float = 1.0, omega_max: float = 1.5,
-                 dt: float = 0.02, solver: str = "ECOS"):
+                 dt: float = 0.02, solver: str = "OSQP",
+                 block_size: int = 1):
         """
         Initialize MPC controller.
         
@@ -105,6 +106,7 @@ class MPCController:
             omega_max: Maximum angular velocity (rad/s)
             dt: Sampling time (seconds)
             solver: CVXPY solver to use (ECOS, SCS, OSQP)
+            block_size: Move-blocking size (1=no blocking, 2=halve decision vars)
         """
         self.N = horizon
         self.dt = dt
@@ -113,14 +115,18 @@ class MPCController:
         self.v_max = v_max
         self.omega_max = omega_max
         self.solver = solver
+        self.block_size = block_size
+        
+        # Number of blocked control moves
+        self.N_blocks = (horizon + block_size - 1) // block_size
         
         # Weight matrices
         if Q_diag is None:
-            Q_diag = [10.0, 10.0, 1.0]
+            Q_diag = [10.0, 10.0, 50.0]  # Strong heading weight for stability
         if R_diag is None:
             R_diag = [0.1, 0.1]
         if P_diag is None:
-            P_diag = [20.0, 20.0, 2.0]  # Higher terminal weight
+            P_diag = [20.0, 20.0, 40.0]  # Strong terminal heading weight
         
         self.Q = np.diag(Q_diag)
         self.R = np.diag(R_diag)
@@ -132,6 +138,10 @@ class MPCController:
         # Warm-start storage
         self._prev_solution: Optional[np.ndarray] = None
         self._prev_states: Optional[np.ndarray] = None
+        
+        # Cold-start handling
+        self._step_count = 0
+        self._ramp_up_steps = 10  # Number of steps to ramp up control authority
         
         # State and control dimensions
         self.nx = 3  # [px, py, theta]
@@ -259,12 +269,12 @@ class MPCController:
                             >= safe_dist
                         )
         
-        # Formulate and solve problem
+        # Formulate and solve problem with warm-start
         problem = cp.Problem(cp.Minimize(cost), constraints)
         
         try:
-            # Solve with specified solver
-            problem.solve(solver=getattr(cp, self.solver), verbose=False)
+            # Solve with specified solver (warm_start reduces iterations)
+            problem.solve(solver=getattr(cp, self.solver), verbose=False, warm_start=True)
         except Exception as e:
             # Try fallback solver
             try:
@@ -354,7 +364,20 @@ class MPCController:
         
         # Decision variables: Deviations from reference
         dx = cp.Variable((self.N + 1, self.nx))
-        du = cp.Variable((self.N, self.nu))
+        
+        # Move-blocking: Use fewer control decision variables
+        # du_blocked has N_blocks rows, each block applies to block_size steps
+        du_blocked = cp.Variable((self.N_blocks, self.nu))
+        
+        # Expand blocked controls to full horizon
+        # du[k] = du_blocked[k // block_size]
+        du_expanded = []
+        for k in range(self.N):
+            block_idx = k // self.block_size
+            if block_idx < self.N_blocks:
+                du_expanded.append(du_blocked[block_idx])
+            else:
+                du_expanded.append(du_blocked[-1])  # Use last block if overflow
         
         # Slack variables
         if use_soft_constraints and len(obstacles) > 0:
@@ -382,7 +405,7 @@ class MPCController:
             cost += cp.quad_form(dx[k], self.Q)
             
             # Penalize total control effort (u = u_ref + du)
-            u_k = u_refs[k] + du[k]
+            u_k = u_refs[k] + du_expanded[k]
             cost += cp.quad_form(u_k, self.R)
         
         # Terminal cost
@@ -402,11 +425,11 @@ class MPCController:
             v_r = u_refs[k, 0] if abs(u_refs[k, 0]) > 0.01 else 0.1
             theta_r = x_refs_unwrapped[k, 2]
             A_d, B_d = self.linearizer.get_discrete_model_explicit(v_r, theta_r)
-            constraints.append(dx[k + 1] == A_d @ dx[k] + B_d @ du[k])
+            constraints.append(dx[k + 1] == A_d @ dx[k] + B_d @ du_expanded[k])
         
         # Actuator constraints on TOTAL control u = u_ref + du
         for k in range(self.N):
-            u_total = u_refs[k] + du[k]
+            u_total = u_refs[k] + du_expanded[k]
             constraints.append(u_total[0] >= -self.v_max)
             constraints.append(u_total[0] <= self.v_max)
             constraints.append(u_total[1] >= -self.omega_max)
@@ -444,11 +467,12 @@ class MPCController:
                     else:
                         constraints.append(lhs >= safe_dist)
         
-        # Solve
+        # Solve with warm-start for faster convergence
         problem = cp.Problem(cp.Minimize(cost), constraints)
         
         try:
-            problem.solve(solver=getattr(cp, self.solver), verbose=False)
+            # OSQP with warm_start reduces iterations on consecutive solves
+            problem.solve(solver=getattr(cp, self.solver), verbose=False, warm_start=True)
         except:
             try:
                 problem.solve(solver=cp.SCS, verbose=False)
@@ -462,11 +486,25 @@ class MPCController:
             
             # Reconstruct absolute states and controls
             dx_val = dx.value
-            du_val = du.value
+            
+            # Expand blocked controls to full horizon
+            du_blocked_val = du_blocked.value
+            du_val = np.zeros((self.N, self.nu))
+            for k in range(self.N):
+                block_idx = min(k // self.block_size, self.N_blocks - 1)
+                du_val[k] = du_blocked_val[block_idx]
             
             x_pred = x_refs[:self.N+1] + dx_val
             u_pred = u_refs[:self.N] + du_val
             
+            # Cold-start ramp-up: limit angular velocity during initial steps
+            # This prevents aggressive heading corrections during cold-start
+            if self._step_count < self._ramp_up_steps:
+                ramp_factor = (self._step_count + 1) / self._ramp_up_steps
+                omega_limit = self.omega_max * ramp_factor
+                u_pred[0, 1] = np.clip(u_pred[0, 1], -omega_limit, omega_limit)
+            
+            self._step_count += 1
             self._prev_solution = u_pred
             self._prev_states = x_pred
             
@@ -506,6 +544,12 @@ class MPCController:
         while angle < -np.pi:
             angle += 2 * np.pi
         return angle
+    
+    def reset(self):
+        """Reset controller state for new simulation/episode."""
+        self._step_count = 0
+        self._prev_solution = None
+        self._prev_states = None
     
     def _clip_control(self, u: np.ndarray) -> np.ndarray:
         """Clip control to actuator limits."""

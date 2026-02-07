@@ -1,0 +1,46 @@
+[2026-02-08 00:27:37.906] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260208_002737.log
+[2026-02-08 00:27:38.913] [INFO] [mpc_sim] k=20 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:39.101] [INFO] [mpc_sim] k=25 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:39.309] [INFO] [mpc_sim] k=30 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:39.518] [INFO] [mpc_sim] k=35 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:39.654] [INFO] [mpc_sim] k=40 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:39.811] [INFO] [mpc_sim] k=45 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:40.034] [INFO] [mpc_sim] k=50 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:40.214] [INFO] [mpc_sim] k=55 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:50.770] [INFO] [mpc_sim] k=365 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:50.971] [INFO] [mpc_sim] k=370 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:51.136] [INFO] [mpc_sim] k=375 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:51.283] [INFO] [mpc_sim] k=380 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:51.537] [INFO] [mpc_sim] k=385 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:51.720] [INFO] [mpc_sim] k=390 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:51.894] [INFO] [mpc_sim] k=395 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:52.147] [INFO] [mpc_sim] k=400 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:52.348] [INFO] [mpc_sim] k=405 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:52.521] [INFO] [mpc_sim] k=410 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:52.702] [INFO] [mpc_sim] k=415 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:52.875] [INFO] [mpc_sim] k=420 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:53.075] [INFO] [mpc_sim] k=425 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:53.273] [INFO] [mpc_sim] k=430 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:58.343] [INFO] [mpc_sim] k=565 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:58.566] [INFO] [mpc_sim] k=570 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:58.758] [INFO] [mpc_sim] k=575 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:58.960] [INFO] [mpc_sim] k=580 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:59.209] [INFO] [mpc_sim] k=585 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:59.396] [INFO] [mpc_sim] k=590 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:59.577] [INFO] [mpc_sim] k=595 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:27:59.811] [INFO] [mpc_sim] k=600 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:00.951] [INFO] [mpc_sim] k=630 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:01.099] [INFO] [mpc_sim] k=635 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:01.291] [INFO] [mpc_sim] k=640 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:01.491] [INFO] [mpc_sim] k=645 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:01.674] [INFO] [mpc_sim] k=650 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:01.857] [INFO] [mpc_sim] k=655 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:02.084] [INFO] [mpc_sim] k=660 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:02.247] [INFO] [mpc_sim] k=665 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:02.434] [INFO] [mpc_sim] k=670 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:02.643] [INFO] [mpc_sim] k=675 | Constraint: slack_activated | reason=feasibility
+[2026-02-08 00:28:13.113] [INFO] [mpc_sim] Simulation completed | total_entries=2038 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260208_002737 | max_error_norm=1.0068096529881785 | mean_error_norm=0.2090727401523788 | final_error_norm=0.07661947677119857
+[2026-02-08 00:28:13.129] [INFO] [mpc_sim] State history exported to logs\states_20260208_002737.csv
+[2026-02-08 00:28:13.137] [INFO] [mpc_sim] Control history exported to logs\controls_20260208_002737.csv
+[2026-02-08 00:28:13.303] [INFO] [mpc_sim] Logs exported to logs\simulation_20260208_002737.json
+[2026-02-08 00:28:13.304] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2038, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260208_002737', 'max_error_norm': 1.0068096529881785, 'mean_error_norm': 0.2090727401523788, 'final_error_norm': 0.07661947677119857}
