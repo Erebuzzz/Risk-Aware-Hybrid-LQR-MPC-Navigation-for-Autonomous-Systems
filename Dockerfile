@@ -26,19 +26,24 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python dependencies ─────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+RUN python3 -m venv --system-site-packages /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --break-system-packages --no-cache-dir -r /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # ── Copy workspace ──────────────────────────────────────────────────────────
 COPY ros2_ws /ros2_ws
 WORKDIR /ros2_ws
 
 # ── Install hybrid_controller as editable package ───────────────────────────
-RUN pip3 install --break-system-packages -e src/hybrid_controller
+RUN pip install -e src/hybrid_controller
 
 # ── Build ROS2 workspace ────────────────────────────────────────────────────
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    colcon build --symlink-install
+    python3 /usr/bin/colcon build --symlink-install
 
 # ── Entrypoint ──────────────────────────────────────────────────────────────
 COPY docker-entrypoint.sh /docker-entrypoint.sh
