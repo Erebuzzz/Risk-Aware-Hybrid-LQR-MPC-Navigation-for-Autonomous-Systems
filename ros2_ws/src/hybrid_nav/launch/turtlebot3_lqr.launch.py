@@ -35,10 +35,8 @@ def generate_launch_description():
     x_pose = LaunchConfiguration('x_pose', default='0.0')
     y_pose = LaunchConfiguration('y_pose', default='0.0')
 
-    # LQR doesn't need obstacle world, but use it for consistency
-    custom_world = os.path.join(hybrid_nav_dir, 'worlds', 'hybrid_obstacle_world.sdf')
-    fallback_world = os.path.join(tb3_gazebo_dir, 'worlds', 'empty_world.world')
-    world = custom_world if os.path.exists(custom_world) else fallback_world
+    # LQR doesn't need obstacle world, use empty world
+    world = os.path.join(tb3_gazebo_dir, 'worlds', 'empty_world.world')
 
     set_gz_model_path = AppendEnvironmentVariable(
         'GZ_SIM_RESOURCE_PATH',

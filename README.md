@@ -13,52 +13,42 @@ This architecture has been thoroughly validated using Monte Carlo statistical te
 
 ## System Architecture
 
-The following diagram illustrates the flow of data between the Gazebo simulation environment, the ROS2 bridging layers, and the Python-based controller nodes.
+Data flows from Gazebo through ROS–GZ bridges, ROS 2 nodes (obstacle publisher, active controller, twist relay), and back to the simulated robot. Controllers share topics such as `/odom`, `/clock`, `/obstacles`, and `/cmd_vel` (as `TwistStamped`, then relayed as `Twist` to the bridge).
 
 ```mermaid
-graph TD
-    %% Define Subgraphs
-    subgraph Gazebo["Gazebo Simulation"]
-        GZ_Sim[Gazebo Sim<br>Physics & World]
-        TB3[TurtleBot3 Model]
-        GZ_Sim <--> TB3
-    end
-
-    subgraph ROS_Bridge["ROS-Gazebo Bridge Layer"]
-        Bridge_Odom[/odom <br> gz.msgs.Odometry/]
-        Bridge_Clock[/clock <br> gz.msgs.Clock/]
-        Bridge_CmdVel[/cmd_vel <br> gz.msgs.Twist/]
-    end
-
-    subgraph ROS2_Nodes["ROS2 Navigation Nodes"]
-        TwistRelay(Twist Relay Node<br>geometry_msgs/TwistStamped -> Twist)
-        ObsPub(Obstacle Publisher)
-        
-        subgraph Controllers["Controller Logic"]
-            LQR_Ctrl[LQR Controller]
-            MPC_Ctrl[MPC Controller]
-            AMPC_Ctrl[Adaptive MPC Controller]
-            Hybrid_Super[Hybrid Supervisor<br>Blends LQR + MPC]
-        end
-        
-        CtrlNode(Controller Node)
-    end
-
-    %% Connections
-    TB3 -- Odom & Clock --> Bridge_Odom
-    TB3 -.-> Bridge_Clock
-    
-    Bridge_Odom -- "nav_msgs/Odometry" --> CtrlNode
-    Bridge_Clock -- "rosgraph_msgs/Clock" --> CtrlNode
-    
-    ObsPub -- "Obstacle Array" --> CtrlNode
-    
-    CtrlNode <--> Controllers
-    
-    CtrlNode -- "geometry_msgs/TwistStamped<br>/cmd_vel" --> TwistRelay
-    TwistRelay -- "geometry_msgs/Twist<br>/cmd_vel_bridge" --> Bridge_CmdVel
-    Bridge_CmdVel -- "gz.msgs.Twist" --> TB3
+flowchart TB
+  subgraph simEnv [Gazebo simulation]
+    gzWorld[Gazebo world]
+    robotModel[TurtleBot3]
+    gzWorld <--> robotModel
+  end
+  subgraph bridgeLayer [ROS-Gazebo bridge]
+    topicOdom[Topic odom]
+    topicClock[Topic clock]
+    topicCmd[Topic cmd_vel]
+  end
+  subgraph rosStack [ROS2 hybrid_nav stack]
+    twistRelay[Twist relay node]
+    obsPub[Obstacle publisher]
+    ctrlNode[Controller node]
+  end
+  robotModel --> topicOdom
+  robotModel --> topicClock
+  topicCmd --> robotModel
+  twistRelay --> topicCmd
+  topicOdom --> ctrlNode
+  topicClock --> ctrlNode
+  obsPub --> ctrlNode
+  ctrlNode --> twistRelay
 ```
+
+Launch **one** of: `lqr_controller_node`, `mpc_controller_node`, `adaptive_mpc_controller_node`, or `hybrid_controller_node` as `ctrlNode`. All use the same topics and twist relay to the bridge.
+
+## References and attribution
+
+- **Short curated list:** [REFERENCES.md](REFERENCES.md) (textbooks, anchor papers including Kong *et al.* hybrid iLQR–MPC on legged robots as the main conceptual precursor, software including adaptive-MPC reference repo).
+- **Full annotated bibliography** (pillars, code module map): [docs/REFERENCES.md](docs/REFERENCES.md).
+- **Adaptive MPC:** methodology context and MATLAB examples in [github.com/KohlerJohannes/Adaptive](https://github.com/KohlerJohannes/Adaptive) (Köhler, 2026); this repo’s `AdaptiveMPCController` is Python/CasADi and not a line-for-line port.
 
 ## Setup Instructions
 

@@ -15,8 +15,14 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from std_msgs.msg import Float32, String, Float32MultiArray
+from rclpy.qos import DurabilityPolicy
+
+import logging
+import os
+from datetime import datetime
 
 from hybrid_controller.controllers.adaptive_mpc_controller import AdaptiveMPCController
+from hybrid_nav.trajectory_index import nearest_idx_closed
 
 
 def euler_from_quaternion(q):
@@ -46,7 +52,7 @@ class AdaptiveMPCControllerNode(Node):
         self.declare_parameter('omega_max', 2.84)
         
         self.declare_parameter('horizon', 10)
-        self.declare_parameter('d_safe', 0.25)
+        self.declare_parameter('d_safe', 0.35)
         self.declare_parameter('q_x', 30.0)
         self.declare_parameter('q_y', 30.0)
         self.declare_parameter('q_theta', 5.0)
@@ -104,14 +110,23 @@ class AdaptiveMPCControllerNode(Node):
         self.cmd_pub = self.create_publisher(TwistStamped, '/cmd_vel', qos)
         self.err_pub = self.create_publisher(Float32, '/mpc/tracking_error', qos)
         self.mode_pub = self.create_publisher(String, '/mpc/mode', qos)
-        self.ref_pub = self.create_publisher(Path, '/hybrid/reference_path', 1)
+        
+        qos_static = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
+        self.ref_pub = self.create_publisher(Path, '/hybrid/reference_path', qos_static)
         self.pred_pub = self.create_publisher(Path, '/hybrid/predicted_path', 1)
+        self.trail_pub = self.create_publisher(Path, '/hybrid/robot_trail', qos)
+        
+        self.robot_trail = Path()
+        self.robot_trail.header.frame_id = 'odom'
+
+        self._run_file_logger, log_file = self._setup_run_file_logger('adaptive_mpc_node')
+        self._run_file_logger.info('Tick,X,Y,Theta,Error,V,Omega,Params,Mode')
 
         self.create_timer(1.0 / rate, self._control_loop)
-        self.create_timer(3.0, self._pub_ref_path_once)
         self._ref_published = False
+        self._pub_ref_path_once()
 
-        self.get_logger().info('🤖 Adaptive MPC Node Ready to track trajectory')
+        self.get_logger().info(f'🤖 Adaptive MPC Node Ready. Logging to {log_file}')
 
     def _generate_trajectory(self):
         w = self.freq
@@ -143,6 +158,13 @@ class AdaptiveMPCControllerNode(Node):
         if not self.odom_ok:
             self.odom_ok = True
             self.get_logger().info(f'📡 Odom OK: ({self.x:.3f}, {self.y:.3f})')
+            
+        ps = PoseStamped()
+        ps.header = msg.header
+        ps.pose = msg.pose.pose
+        self.robot_trail.poses.append(ps)
+        self.robot_trail.header.stamp = self.get_clock().now().to_msg()
+        self.trail_pub.publish(self.robot_trail)
 
     def _obs_cb(self, msg):
         obs_list = []
@@ -165,18 +187,9 @@ class AdaptiveMPCControllerNode(Node):
         if self.x_prev is not None and self.u_prev is not None:
             self.mpc.adapt_parameters(x_current, self.x_prev, self.u_prev)
 
-        window = 40
-        dists = []
-        indices = []
-        for i in range(-window, window + 1):
-            idx = (self.current_idx + i) % self.N
-            d = np.sqrt((self.ref_x[idx] - self.x)**2 + (self.ref_y[idx] - self.y)**2)
-            dists.append(d)
-            indices.append(idx)
-            
-        local_min_idx = np.argmin(dists)
-        self.current_idx = indices[local_min_idx]
-        dist_err = dists[local_min_idx]
+        self.current_idx, dist_err = nearest_idx_closed(
+            self.ref_x, self.ref_y, self.current_idx, self.x, self.y, self.N
+        )
 
         x_refs = np.zeros((self.horizon + 1, 3))
         u_refs = np.zeros((self.horizon, 2))
@@ -209,13 +222,13 @@ class AdaptiveMPCControllerNode(Node):
                 self.get_logger().warn("Adaptive MPC Infeasible!")
                 mode = "AMPC_INFEASIBLE"
                 if self.u_prev is not None:
-                    v = float(np.clip(self.u_prev[0] * 0.8, 0.0, self.v_max))
+                    v = float(np.clip(self.u_prev[0] * 0.8, -self.v_max, self.v_max))
                     omega = float(np.clip(self.u_prev[1] * 0.8, -self.omega_max, self.omega_max))
                 
         except Exception as e:
             self.get_logger().error(f"Adaptive MPC computation failed: {e}")
 
-        v = float(np.clip(v, 0.0, self.v_max))
+        v = float(np.clip(v, -self.v_max, self.v_max))
         omega = float(np.clip(omega, -self.omega_max, self.omega_max))
 
         self.x_prev = x_current
@@ -225,6 +238,13 @@ class AdaptiveMPCControllerNode(Node):
 
         e = Float32(); e.data = float(dist_err); self.err_pub.publish(e)
         m = String(); m.data = mode; self.mode_pub.publish(m)
+        
+        params = self.mpc.param_estimates if hasattr(self.mpc, 'param_estimates') else [0.0, 0.0]
+        self._run_file_logger.info(
+            f"{self.tick_count},{self.x:.3f},{self.y:.3f},{self.theta:.3f},"
+            f"{dist_err:.3f},{v:.3f},{omega:.3f},"
+            f'"{params[0]:.2f}_{params[1]:.2f}",{mode}'
+        )
 
         if self.tick_count % 20 == 0:
             params = self.mpc.param_estimates
@@ -274,6 +294,30 @@ class AdaptiveMPCControllerNode(Node):
             p.poses.append(ps)
         self.pred_pub.publish(p)
 
+    def _setup_run_file_logger(self, basename: str):
+        log_dir = os.path.join(os.getcwd(), 'Output', 'Logs')
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(
+            log_dir, f'{basename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        logger = logging.getLogger(f'hybrid_nav.{basename}_{id(self)}')
+        logger.setLevel(logging.DEBUG)
+        logger.handlers.clear()
+        fh = logging.FileHandler(path, encoding='utf-8')
+        fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        logger.addHandler(fh)
+        logger.propagate = False
+        return logger, path
+
+    def _close_run_file_logger(self):
+        log = getattr(self, '_run_file_logger', None)
+        if not log:
+            return
+        for h in list(log.handlers):
+            log.removeHandler(h)
+            h.flush()
+            h.close()
+        self._run_file_logger = None
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -284,6 +328,7 @@ def main(args=None):
         node._send(0.0, 0.0)
         node.get_logger().info('Adaptive MPC Node Stopped.')
     finally:
+        node._close_run_file_logger()
         node.destroy_node()
         rclpy.shutdown()
 

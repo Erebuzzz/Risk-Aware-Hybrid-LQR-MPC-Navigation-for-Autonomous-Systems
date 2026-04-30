@@ -129,3 +129,9 @@ P = solve_discrete_are(A_d, B_d, self.Q, self.R)
 K = np.linalg.solve(self.R + B_d.T @ P @ B_d, B_d.T @ P @ A_d)
 ```
 This guarantees the terminal penalty precisely reflects the true system dynamics. 
+
+---
+
+## 6. External reference (adaptive MPC)
+
+Köhler’s companion MATLAB repository for certainty-equivalent adaptive MPC is available at [https://github.com/KohlerJohannes/Adaptive](https://github.com/KohlerJohannes/Adaptive) (MATLAB, YALMIP, MOSEK, CasADi). It accompanies *Certainty-equivalent adaptive MPC for uncertain nonlinear systems* (2026). This project’s `AdaptiveMPCController` is a separate Python/CasADi implementation for ROS 2 and TurtleBot3; cite Köhler’s repository for theoretical and methodological context, not as a line-for-line code base.

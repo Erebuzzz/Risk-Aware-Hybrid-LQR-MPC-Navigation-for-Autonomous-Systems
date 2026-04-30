@@ -15,9 +15,15 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from std_msgs.msg import Float32, String
+from rclpy.qos import DurabilityPolicy
+
+import logging
+import os
+from datetime import datetime
 
 # Import the existing LQR controller logic
 from hybrid_controller.controllers.lqr_controller import LQRController
+from hybrid_nav.trajectory_index import nearest_idx_closed
 
 
 def euler_from_quaternion(q):
@@ -98,14 +104,22 @@ class LQRControllerNode(Node):
         self.err_pub = self.create_publisher(Float32, '/lqr/tracking_error', qos)
         self.mode_pub = self.create_publisher(String, '/lqr/mode', qos)
         
-        # Publish path on the topic RViz expects
-        self.ref_pub = self.create_publisher(Path, '/hybrid/reference_path', 1)
+        # Publish path on the topic RViz expects (Static map, Transient Local)
+        qos_static = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
+        self.ref_pub = self.create_publisher(Path, '/hybrid/reference_path', qos_static)
+        self.trail_pub = self.create_publisher(Path, '/hybrid/robot_trail', qos)
+        
+        self.robot_trail = Path()
+        self.robot_trail.header.frame_id = 'odom'
+
+        self._run_file_logger, log_file = self._setup_run_file_logger('lqr_node')
+        self._run_file_logger.info('Tick,X,Y,Theta,Error,V,Omega,Mode')
 
         self.create_timer(1.0 / rate, self._control_loop)
-        self.create_timer(3.0, self._pub_ref_path_once)
         self._ref_published = False
+        self._pub_ref_path_once()
 
-        self.get_logger().info('🤖 LQR Node Ready to track trajectory')
+        self.get_logger().info(f'🤖 LQR Node Ready. Logging to {log_file}')
 
     # ── Generate Trajectory ────────────────────────────────────
     def _generate_trajectory(self, duration):
@@ -143,27 +157,24 @@ class LQRControllerNode(Node):
         if not self.odom_ok:
             self.odom_ok = True
             self.get_logger().info(f'📡 Odom OK: ({self.x:.3f}, {self.y:.3f})')
+            
+        # Update Robot Trail
+        ps = PoseStamped()
+        ps.header = msg.header
+        ps.pose = msg.pose.pose
+        self.robot_trail.poses.append(ps)
+        self.robot_trail.header.stamp = self.get_clock().now().to_msg()
+        self.trail_pub.publish(self.robot_trail)
 
     # ── Main Control Loop ──────────────────────────────────────
     def _control_loop(self):
         if not self.odom_ok:
             return
 
-        # 1. Find the target reference point based on nearest distance.
-        # Use a wraparound moving window to prevent jumping at trajectory crossings
-        # and to seamlessly loop back to the start.
-        window = 40  # Search 40 points behind and ahead (~2 seconds)
-        dists = []
-        indices = []
-        for i in range(-window, window + 1):
-            idx = (self.current_idx + i) % self.N
-            d = np.sqrt((self.ref_x[idx] - self.x)**2 + (self.ref_y[idx] - self.y)**2)
-            dists.append(d)
-            indices.append(idx)
-            
-        local_min_idx = np.argmin(dists)
-        self.current_idx = indices[local_min_idx]
-        dist_err = dists[local_min_idx]
+        # 1. Forward-biased nearest point on closed loop (stable at figure-8 crossing).
+        self.current_idx, dist_err = nearest_idx_closed(
+            self.ref_x, self.ref_y, self.current_idx, self.x, self.y, self.N
+        )
 
         # Use a point further ahead on the trajectory to anticipate sharp curves
         # This keeps the LQR heading error small, preventing linearization breakdown
@@ -192,10 +203,8 @@ class LQRControllerNode(Node):
             self.get_logger().error(f"LQR computation failed: {e}")
             v, omega = 0.0, 0.0
 
-        # Safety clipping - strictly prevent backward driving!
-        # When LQR linearization breaks down on sharp corners, it commands v < 0.
-        # We must force v >= 0.0 so the robot always drives forward and corrects its heading.
-        v = float(np.clip(v, 0.0, self.v_max))
+        # Safety clipping - ALLOW REVERSE!
+        v = float(np.clip(v, -self.v_max, self.v_max))
         omega = float(np.clip(omega, -self.omega_max, self.omega_max))
 
         # Publish command
@@ -204,6 +213,12 @@ class LQRControllerNode(Node):
         # Publish diagnostics
         e = Float32(); e.data = float(dist_err); self.err_pub.publish(e)
         m = String(); m.data = 'LQR_TRACKING'; self.mode_pub.publish(m)
+
+        # Log to file
+        self._run_file_logger.info(
+            f"{self.tick_count},{self.x:.3f},{self.y:.3f},{self.theta:.3f},"
+            f"{dist_err:.3f},{v:.3f},{omega:.3f},LQR_TRACKING"
+        )
 
         # Log
         if self.tick_count % 20 == 0:
@@ -241,6 +256,30 @@ class LQRControllerNode(Node):
             p.poses.append(ps)
         self.ref_pub.publish(p)
 
+    def _setup_run_file_logger(self, basename: str):
+        log_dir = os.path.join(os.getcwd(), 'Output', 'Logs')
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(
+            log_dir, f'{basename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        logger = logging.getLogger(f'hybrid_nav.{basename}_{id(self)}')
+        logger.setLevel(logging.DEBUG)
+        logger.handlers.clear()
+        fh = logging.FileHandler(path, encoding='utf-8')
+        fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        logger.addHandler(fh)
+        logger.propagate = False
+        return logger, path
+
+    def _close_run_file_logger(self):
+        log = getattr(self, '_run_file_logger', None)
+        if not log:
+            return
+        for h in list(log.handlers):
+            log.removeHandler(h)
+            h.flush()
+            h.close()
+        self._run_file_logger = None
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -251,6 +290,7 @@ def main(args=None):
         node._send(0.0, 0.0)
         node.get_logger().info('LQR Node Stopped.')
     finally:
+        node._close_run_file_logger()
         node.destroy_node()
         rclpy.shutdown()
 

@@ -9,6 +9,7 @@ Panels:
         - /RobotModel1
         - /Reference Path1
         - /Predicted Path1
+        - /Robot Path Trail1
         - /Tracking Error1
       Splitter Ratio: 0.5
     Tree Height: 700
@@ -81,7 +82,7 @@ Visualization Manager:
       Shaft Length: 0.1
       Topic:
         Depth: 1
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /hybrid/reference_path
@@ -111,6 +112,30 @@ Visualization Manager:
         Value: /hybrid/predicted_path
       Value: true
 
+    - Class: rviz_default_plugins/Path
+      Color: 0; 255; 255
+      Enabled: true
+      Head Diameter: 0.02
+      Head Length: 0.01
+      Length: 0.3
+      Line Style: Lines
+      Line Width: 0.04
+      Name: Robot Path Trail
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0.03
+      Pose Style: None
+      Shaft Diameter: 0.01
+      Shaft Length: 0.1
+      Topic:
+        Depth: 10
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /hybrid/robot_trail
+      Value: true
+
     - Class: rviz_default_plugins/Odometry
       Angle Tolerance: 0.1
       Covariance:
@@ -130,7 +155,7 @@ Visualization Manager:
         Value: false
       Enabled: true
       Keep: 200
-      Name: Robot Trail
+      Name: Odom arrows
       Position Tolerance: 0.05
       Shape:
         Alpha: 0.8

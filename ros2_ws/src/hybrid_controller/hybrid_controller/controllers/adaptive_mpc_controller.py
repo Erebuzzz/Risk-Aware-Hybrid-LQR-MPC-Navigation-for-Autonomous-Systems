@@ -14,6 +14,10 @@ Implements a nonlinear Model Predictive Controller with:
 Inspired by adaptive MPC research for quadrotor control,
 adapted for differential-drive robot kinematics and Figure-8 tracking.
 
+Theory / reference implementation context: Köhler, "Certainty-equivalent adaptive MPC
+for uncertain nonlinear systems" (2026), MATLAB examples at
+https://github.com/KohlerJohannes/Adaptive — this Python class is not a port.
+
 MPC Problem Formulation:
     min  Σ_{k=0}^{N-1} (||x_k - x_{ref,k}||²_Q + ||u_k - u_{ref,k}||²_R + q_ξ||ξ_k||²)
        + ω Σ_{k=N}^{N+M} (||x_k - x_{ref,k}||²_Q + ||u_k - u_{ref,k}||²_R + q_ξ||ξ_k||²)

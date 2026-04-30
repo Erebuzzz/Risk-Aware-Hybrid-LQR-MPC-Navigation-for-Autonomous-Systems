@@ -169,7 +169,7 @@ A **clear and general navigation-oriented framework** is missing. Specifically:
 
 ## 10. Key References
 
-1. **Kong et al.** - *Hybrid iLQR Model Predictive Control for Contact-Implicit Stabilization on Legged Robots*, IEEE T-RO 2023
+1. **Kong, Li, Council, Johnson** — *Hybrid iLQR Model Predictive Control for Contact Implicit Stabilization on Legged Robots*, IEEE T-RO, vol. 39, no. 6, pp. 4712–4727, Dec. 2023. doi: [10.1109/TRO.2023.3308773](https://doi.org/10.1109/TRO.2023.3308773)
 
 2. **Le Cleac'h et al.** - *Fast Contact-Implicit Model Predictive Control*, IEEE T-RO 2024
 

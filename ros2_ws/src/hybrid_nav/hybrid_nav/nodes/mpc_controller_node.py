@@ -15,9 +15,15 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from std_msgs.msg import Float32, String, Float32MultiArray
+from rclpy.qos import DurabilityPolicy
+
+import logging
+import os
+from datetime import datetime
 
 # Import the existing MPC controller logic
 from hybrid_controller.controllers.mpc_controller import MPCController
+from hybrid_nav.trajectory_index import nearest_idx_closed
 
 
 def euler_from_quaternion(q):
@@ -56,6 +62,8 @@ class MPCControllerNode(Node):
         self.declare_parameter('q_theta', 5.0)
         self.declare_parameter('r_v', 1.0)
         self.declare_parameter('r_omega', 0.5)
+        self.declare_parameter('du_weight_v', 0.1)
+        self.declare_parameter('du_weight_omega', 0.5)
 
         rate = self.get_parameter('control_rate').value
         self.A = self.get_parameter('trajectory_amplitude').value
@@ -76,12 +84,18 @@ class MPCControllerNode(Node):
             self.get_parameter('r_omega').value
         ]
 
+        S_diag = [
+            float(self.get_parameter('du_weight_v').value),
+            float(self.get_parameter('du_weight_omega').value),
+        ]
+
         # ── Initialize pure MPC Controller ─────────────────────
         self.mpc = MPCController(
             horizon=self.horizon,
             Q_diag=Q_diag, 
             R_diag=R_diag,
             P_diag=[q*2.0 for q in Q_diag],
+            S_diag=S_diag,
             d_safe=self.d_safe,
             slack_penalty=5000.0,
             dt=self.dt, 
@@ -89,7 +103,9 @@ class MPCControllerNode(Node):
             omega_max=self.omega_max,
             solver="OSQP"
         )
-        self.get_logger().info(f'✅ Pure MPC Controller Initialized. N={self.horizon}, Q={Q_diag}')
+        self.get_logger().info(
+            f'✅ Pure MPC Controller Initialized. N={self.horizon}, Q={Q_diag}, S={S_diag}'
+        )
 
         # ── Trajectory: generate dense path ────────────────────
         self._generate_trajectory()
@@ -103,6 +119,7 @@ class MPCControllerNode(Node):
         self.current_idx = 0
         self.obstacles = []
         self.last_u = np.array([0.0, 0.0])
+        self._last_mpc_status = None
 
         # ── ROS ────────────────────────────────────────────────
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -112,14 +129,23 @@ class MPCControllerNode(Node):
         self.cmd_pub = self.create_publisher(TwistStamped, '/cmd_vel', qos)
         self.err_pub = self.create_publisher(Float32, '/mpc/tracking_error', qos)
         self.mode_pub = self.create_publisher(String, '/mpc/mode', qos)
-        self.ref_pub = self.create_publisher(Path, '/hybrid/reference_path', 1)
+        
+        qos_static = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
+        self.ref_pub = self.create_publisher(Path, '/hybrid/reference_path', qos_static)
         self.pred_pub = self.create_publisher(Path, '/hybrid/predicted_path', 1)
+        self.trail_pub = self.create_publisher(Path, '/hybrid/robot_trail', qos)
+        
+        self.robot_trail = Path()
+        self.robot_trail.header.frame_id = 'odom'
+
+        self._run_file_logger, log_file = self._setup_run_file_logger('mpc_node')
+        self._run_file_logger.info('Tick,X,Y,Theta,Error,V,Omega,Mode')
 
         self.create_timer(1.0 / rate, self._control_loop)
-        self.create_timer(3.0, self._pub_ref_path_once)
         self._ref_published = False
+        self._pub_ref_path_once()
 
-        self.get_logger().info('🤖 MPC Node Ready to track trajectory')
+        self.get_logger().info(f'🤖 MPC Node Ready. Logging to {log_file}')
 
     # ── Generate Trajectory ────────────────────────────────────
     def _generate_trajectory(self):
@@ -157,6 +183,13 @@ class MPCControllerNode(Node):
         if not self.odom_ok:
             self.odom_ok = True
             self.get_logger().info(f'📡 Odom OK: ({self.x:.3f}, {self.y:.3f})')
+            
+        ps = PoseStamped()
+        ps.header = msg.header
+        ps.pose = msg.pose.pose
+        self.robot_trail.poses.append(ps)
+        self.robot_trail.header.stamp = self.get_clock().now().to_msg()
+        self.trail_pub.publish(self.robot_trail)
 
     def _obs_cb(self, msg):
         obs_list = []
@@ -174,20 +207,10 @@ class MPCControllerNode(Node):
         if not self.odom_ok:
             return
 
-        # 1. Find the target reference point based on nearest distance.
-        # Use a wraparound moving window to prevent jumping at trajectory crossings
-        window = 40
-        dists = []
-        indices = []
-        for i in range(-window, window + 1):
-            idx = (self.current_idx + i) % self.N
-            d = np.sqrt((self.ref_x[idx] - self.x)**2 + (self.ref_y[idx] - self.y)**2)
-            dists.append(d)
-            indices.append(idx)
-            
-        local_min_idx = np.argmin(dists)
-        self.current_idx = indices[local_min_idx]
-        dist_err = dists[local_min_idx]
+        # 1. Forward-biased nearest point on closed loop (stable at figure-8 crossing).
+        self.current_idx, dist_err = nearest_idx_closed(
+            self.ref_x, self.ref_y, self.current_idx, self.x, self.y, self.N
+        )
 
         # 2. Extract reference window for MPC
         x_refs = np.zeros((self.horizon + 1, 3))
@@ -216,28 +239,34 @@ class MPCControllerNode(Node):
                 use_soft_constraints=True
             )
             
-            if solution.feasible:
+            raw_status = getattr(solution, 'status', 'unknown')
+            if raw_status in ['optimal', 'optimal_inaccurate']:
                 v = float(solution.optimal_control[0])
                 omega = float(solution.optimal_control[1])
                 self.last_u = np.array([v, omega])
                 mode = f"MPC_OK (Slack={solution.feasibility_margin:.2f})"
-                
+                self._last_mpc_status = None
+
                 # Publish predicted trajectory for RViz
                 if solution.predicted_states is not None:
                     self._pub_pred_path(solution.predicted_states)
             else:
-                self.get_logger().warn(f"MPC Infeasible!")
+                if self._last_mpc_status != raw_status:
+                    margin = getattr(solution, 'feasibility_margin', None)
+                    self.get_logger().warning(
+                        f'MPC solver non-optimal: status={raw_status} feasibility_margin={margin}'
+                    )
+                    self._last_mpc_status = raw_status
                 mode = "MPC_INFEASIBLE"
-                # Keep last valid control, but brake safely
-                v = float(np.clip(self.last_u[0] * 0.8, 0.0, self.v_max))
-                omega = float(np.clip(self.last_u[1] * 0.8, -self.omega_max, self.omega_max))
+                v = float(solution.optimal_control[0])
+                omega = float(solution.optimal_control[1])
                 self.last_u = np.array([v, omega])
                 
         except Exception as e:
             self.get_logger().error(f"MPC computation failed: {e}")
 
         # Safety clipping
-        v = float(np.clip(v, 0.0, self.v_max))
+        v = float(np.clip(v, -self.v_max, self.v_max))
         omega = float(np.clip(omega, -self.omega_max, self.omega_max))
 
         # Publish command
@@ -246,6 +275,11 @@ class MPCControllerNode(Node):
         # Publish diagnostics
         e = Float32(); e.data = float(dist_err); self.err_pub.publish(e)
         m = String(); m.data = mode; self.mode_pub.publish(m)
+
+        self._run_file_logger.info(
+            f"{self.tick_count},{self.x:.3f},{self.y:.3f},{self.theta:.3f},"
+            f"{dist_err:.3f},{v:.3f},{omega:.3f},{mode}"
+        )
 
         # Log
         if self.tick_count % 20 == 0:
@@ -295,6 +329,30 @@ class MPCControllerNode(Node):
             p.poses.append(ps)
         self.pred_pub.publish(p)
 
+    def _setup_run_file_logger(self, basename: str):
+        log_dir = os.path.join(os.getcwd(), 'Output', 'Logs')
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(
+            log_dir, f'{basename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        logger = logging.getLogger(f'hybrid_nav.{basename}_{id(self)}')
+        logger.setLevel(logging.DEBUG)
+        logger.handlers.clear()
+        fh = logging.FileHandler(path, encoding='utf-8')
+        fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        logger.addHandler(fh)
+        logger.propagate = False
+        return logger, path
+
+    def _close_run_file_logger(self):
+        log = getattr(self, '_run_file_logger', None)
+        if not log:
+            return
+        for h in list(log.handlers):
+            log.removeHandler(h)
+            h.flush()
+            h.close()
+        self._run_file_logger = None
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -305,6 +363,7 @@ def main(args=None):
         node._send(0.0, 0.0)
         node.get_logger().info('MPC Node Stopped.')
     finally:
+        node._close_run_file_logger()
         node.destroy_node()
         rclpy.shutdown()
 

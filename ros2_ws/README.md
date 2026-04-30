@@ -45,3 +45,9 @@ ros2 launch hybrid_nav turtlebot3_hybrid.launch.py
 | `rviz/hybrid_nav.rviz` | RViz2 visualization config |
 
 See `TURTLEBOT3_IMPLEMENTATION_PLAN.md` in the repo root for full details.
+
+## References
+
+- **Essential citations:** [../REFERENCES.md](../REFERENCES.md) (short list).
+- **Extended bibliography:** [../docs/REFERENCES.md](../docs/REFERENCES.md).
+- Adaptive MPC reference implementation context: [github.com/KohlerJohannes/Adaptive](https://github.com/KohlerJohannes/Adaptive).

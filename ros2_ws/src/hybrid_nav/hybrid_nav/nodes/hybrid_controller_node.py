@@ -11,6 +11,13 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from std_msgs.msg import Float32, String, Float32MultiArray
+from rclpy.qos import DurabilityPolicy
+
+import logging
+import os
+from datetime import datetime
+
+from hybrid_nav.trajectory_index import nearest_idx_open, lookahead_idx_open
 
 
 def euler_from_quaternion(q):
@@ -88,16 +95,22 @@ class HybridControllerNode(Node):
         self.err_pub  = self.create_publisher(Float32, '/hybrid/tracking_error', qos)
         self.wgt_pub  = self.create_publisher(Float32, '/hybrid/blend_weight', qos)
         self.mode_pub = self.create_publisher(String, '/hybrid/controller_mode', qos)
-        self.ref_pub  = self.create_publisher(Path, '/hybrid/reference_path', 1)
+        
+        qos_static = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL, reliability=ReliabilityPolicy.RELIABLE)
+        self.ref_pub  = self.create_publisher(Path, '/hybrid/reference_path', qos_static)
+        self.trail_pub = self.create_publisher(Path, '/hybrid/robot_trail', qos)
+        
+        self.robot_trail = Path()
+        self.robot_trail.header.frame_id = 'odom'
+
+        self._run_file_logger, log_file = self._setup_run_file_logger('hybrid_node')
+        self._run_file_logger.info('Tick,X,Y,Theta,Error,V,Omega,Mode,BlendWeight')
 
         self.create_timer(1.0 / rate, self._control_loop)
-        self.create_timer(3.0, self._pub_ref_path_once)
         self._ref_published = False
+        self._pub_ref_path_once()
 
-        self.get_logger().info(
-            f'🤖 v5 Pure-Pursuit | A={self.A}m, {len(self.wp_x)} waypoints, '
-            f'lookahead={self.lookahead}m, cruise={self.cruise_speed}m/s'
-        )
+        self.get_logger().info(f'🤖 Hybrid Node Ready. Logging to {log_file}')
 
     # ── Waypoint generation (unchanged) ───────────────────────
     def _generate_waypoints(self, duration):
@@ -133,6 +146,13 @@ class HybridControllerNode(Node):
         if not self.odom_ok:
             self.odom_ok = True
             self.get_logger().info(f'📡 Odom OK: ({self.x:.3f},{self.y:.3f})')
+            
+        ps = PoseStamped()
+        ps.header = msg.header
+        ps.pose = msg.pose.pose
+        self.robot_trail.poses.append(ps)
+        self.robot_trail.header.stamp = self.get_clock().now().to_msg()
+        self.trail_pub.publish(self.robot_trail)
 
     def _obs_cb(self, msg):
         self.obstacles = []
@@ -148,34 +168,12 @@ class HybridControllerNode(Node):
         if not self.odom_ok:
             return
 
-        if self.wp_idx >= self.n_wp:
-            self._send(0.0, 0.0)
-            return
-
-        # ── FIX 1: Advance wp_idx forward only ────────────────
-        # Walk forward from current wp_idx until we find a waypoint
-        # that is still ahead (not yet passed).
-        # A waypoint is "reached" when the robot is within wp_reach_dist of it.
-        while self.wp_idx < self.n_wp - 1:
-            dist_to_current = np.hypot(
-                self.wp_x[self.wp_idx] - self.x,
-                self.wp_y[self.wp_idx] - self.y
-            )
-            if dist_to_current < self.wp_reach_dist:
-                self.wp_idx += 1  # advance — never go back
-            else:
-                break
-
-        # ── FIX 2: Pure pursuit lookahead ─────────────────────
-        # Find the first waypoint >= lookahead distance ahead
-        target_idx = self.wp_idx
-        for i in range(self.wp_idx, self.n_wp):
-            d = np.hypot(self.wp_x[i] - self.x, self.wp_y[i] - self.y)
-            if d >= self.lookahead:
-                target_idx = i
-                break
-        else:
-            target_idx = self.n_wp - 1
+        self.wp_idx, _dist_wp = nearest_idx_open(
+            self.wp_x, self.wp_y, self.wp_idx, self.x, self.y, self.n_wp
+        )
+        target_idx = lookahead_idx_open(
+            self.wp_x, self.wp_y, self.wp_idx, self.lookahead, self.n_wp
+        )
 
         tx = self.wp_x[target_idx]
         ty = self.wp_y[target_idx]
@@ -186,16 +184,22 @@ class HybridControllerNode(Node):
         target_heading  = np.arctan2(dy, dx)
         heading_err     = normalize_angle(target_heading - self.theta)
 
-        # ── FIX 3: Properly clamped steering ──────────────────
-        # Scale forward speed by how aligned we are (cos of heading error)
-        # cos(0)=1 (full speed), cos(pi/2)=0 (stopped), never negative
         alignment = max(0.0, np.cos(heading_err))
         v = self.cruise_speed * alignment
 
-        # Proportional angular control, clamped immediately
         k_omega = 2.5
         omega = float(np.clip(k_omega * heading_err, -self.omega_max, self.omega_max))
-        v     = float(np.clip(v, 0.0, self.v_max))
+        v     = float(np.clip(v, -self.v_max, self.v_max))
+
+        if self.wp_idx >= self.n_wp - 1:
+            dist_final = float(np.hypot(self.x - self.wp_x[-1], self.y - self.wp_y[-1]))
+            if dist_final <= self.wp_reach_dist:
+                v = 0.0
+                omega = float(np.clip(
+                    k_omega * normalize_angle(self.wp_theta[-1] - self.theta),
+                    -self.omega_max, self.omega_max))
+            else:
+                v = float(np.clip(v * min(1.0, dist_final / 0.25), -self.v_max, self.v_max))
 
         mode    = 'TRACK'
         v_base  = v
@@ -233,6 +237,11 @@ class HybridControllerNode(Node):
 
         self._send(v, omega)
         self._pub_diag(dist_to_target, w_blend, mode)
+
+        self._run_file_logger.info(
+            f"{self.tick_count},{self.x:.3f},{self.y:.3f},{self.theta:.3f},"
+            f"{dist_to_target:.3f},{v:.3f},{omega:.3f},{mode},{w_blend:.3f}"
+        )
 
         if self.tick_count % 20 == 0:
             self.get_logger().info(
@@ -275,6 +284,30 @@ class HybridControllerNode(Node):
         self.ref_pub.publish(p)
         self.get_logger().info(f'📍 Ref path: {len(p.poses)} poses')
 
+    def _setup_run_file_logger(self, basename: str):
+        log_dir = os.path.join(os.getcwd(), 'Output', 'Logs')
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(
+            log_dir, f'{basename}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+        logger = logging.getLogger(f'hybrid_nav.{basename}_{id(self)}')
+        logger.setLevel(logging.DEBUG)
+        logger.handlers.clear()
+        fh = logging.FileHandler(path, encoding='utf-8')
+        fh.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        logger.addHandler(fh)
+        logger.propagate = False
+        return logger, path
+
+    def _close_run_file_logger(self):
+        log = getattr(self, '_run_file_logger', None)
+        if not log:
+            return
+        for h in list(log.handlers):
+            log.removeHandler(h)
+            h.flush()
+            h.close()
+        self._run_file_logger = None
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -284,6 +317,7 @@ def main(args=None):
     except KeyboardInterrupt:
         node._send(0.0, 0.0)
     finally:
+        node._close_run_file_logger()
         node.destroy_node()
         rclpy.shutdown()
 

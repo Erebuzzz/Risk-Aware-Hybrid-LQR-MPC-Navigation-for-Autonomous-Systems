@@ -40,6 +40,8 @@ mpc_controller_node:
     q_theta: 5.0
     r_v: 1.0
     r_omega: 0.5
+    du_weight_v: 0.15
+    du_weight_omega: 0.6
 
 # ── Adaptive MPC Controller ────────────────────────────────────────────────
 adaptive_mpc_controller_node:
