@@ -1,8 +1,10 @@
 # References
 
+**Short list (essentials only):** [REFERENCES.md](../REFERENCES.md) in the repo root.
+
 ## Risk-Aware Hybrid LQR-MPC Navigation for Autonomous Systems
 
-*Last updated: 2026-04-25*
+*Last updated: 2026-04-30*
 
 ---
 
@@ -84,6 +86,10 @@
 - **Relevance:** Survey on combining learning and MPC. Validates our approach of using online LMS estimation within an NMPC framework, with safety maintained through constraint tightening.
 - **DOI:** 10.1146/annurev-control-090419-075625
 
+**[R29]** J. Köhler, *Certainty-equivalent adaptive MPC for uncertain nonlinear systems* (2026), companion MATLAB repository.
+- **Repository:** [github.com/KohlerJohannes/Adaptive](https://github.com/KohlerJohannes/Adaptive) — MATLAB, YALMIP, MOSEK, CasADi; drone and mass–spring–damper demos.
+- **Relevance:** Cited as reference implementation and theory context for **adaptive / certainty-equivalent MPC** under model uncertainty. Our `AdaptiveMPCController` (`adaptive_mpc_controller.py`) follows similar goals (online parameter estimation + MPC) in a **Python + CasADi** stack for TurtleBot3; it is **not** a direct port of the MATLAB code.
+
 ---
 
 ## Pillar 5: Trajectory Tracking and Mobile Robot Control
@@ -140,9 +146,10 @@
 
 ### Comparative References
 
-**[R24]** S. H. Kong, J. T. Kim, and S. Kim, "Hybrid iLQR Model Predictive Control for Contact-Implicit Stabilization on Legged Robots," *IEEE Trans. Robotics*, vol. 39, no. 6, pp. 4658-4675, 2023.
+**[R24]** N. J. Kong, C. Li, G. Council, and A. M. Johnson, "Hybrid iLQR Model Predictive Control for Contact Implicit Stabilization on Legged Robots," *IEEE Trans. Robotics*, vol. 39, no. 6, pp. 4712-4727, Dec. 2023.
 - **Relevance:** Demonstrates hybrid iLQR-MPC for contact-rich legged locomotion. Shows that hybrid approaches outperform monolithic controllers even in highly dynamic domains.
-- **DOI:** 10.1109/TRO.2023.3301228
+- **DOI:** [10.1109/TRO.2023.3308773](https://doi.org/10.1109/TRO.2023.3308773)
+- **IEEE Xplore:** [https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10252162&isnumber=10352149](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10252162&isnumber=10352149)
 
 **[R25]** S. Le Cleac'h, T. A. Howell, M. Schwager, and Z. Manchester, "Fast Contact-Implicit Model Predictive Control," *IEEE Trans. Robotics*, vol. 40, pp. 2176-2193, 2024.
 - **Relevance:** Fast contact-implicit MPC using CALIPSO solver. Demonstrates that specialized solvers can achieve MPC rates of 50-100 Hz, informing our real-time performance targets.
@@ -169,9 +176,9 @@
 | Module | Primary References | Secondary References |
 |--------|-------------------|---------------------|
 | `mpc_controller.py` | [R1], [R2], [R21], [R22] | [R12], [R17] |
-| `adaptive_mpc_controller.py` | [R13], [R14], [R11], [R12] | [R23] |
+| `adaptive_mpc_controller.py` | [R13], [R14], [R11], [R12], [R29] | [R23] |
 | `lqr_controller.py` | [R1], [R16], [R26] | [R3] |
-| `hybrid_blender.py` | [R4], [R5], [R6], [R7] | [R26], [R27] |
+| `hybrid_blender.py` | [R24], [R4], [R5], [R6], [R7] | [R26], [R27] |
 | `risk_metrics.py` | [R8], [R18] | [R20] |
 | `cvxpygen_solver.py` | [R21], [R22], [R3] | [R1] |
 | `formal_proofs.md` | [R6], [R7], [R26], [R27] | [R8], [R1] |

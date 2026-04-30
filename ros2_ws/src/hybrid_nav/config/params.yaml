@@ -1,0 +1,90 @@
+# =============================================================================
+# Risk-Aware Hybrid LQR-MPC Navigation — Centralized Parameters
+# =============================================================================
+# Load via launch file:
+#   Node(..., parameters=[params_yaml_path])
+#
+# All values tuned for TurtleBot3 Burger on GZ Sim (Harmonic/Garden).
+
+# ── LQR Controller ──────────────────────────────────────────────────────────
+lqr_controller_node:
+  ros__parameters:
+    use_sim_time: true
+    control_rate: 20.0
+    trajectory_amplitude: 0.5    # meters
+    trajectory_frequency: 0.2    # rad/s
+    trajectory_duration: 120.0   # seconds (2 min for slower trajectory)
+    dt: 0.05
+    v_max: 0.22                  # TurtleBot3 Burger max linear vel
+    omega_max: 2.84              # TurtleBot3 Burger max angular vel
+    q_x: 5.0
+    q_y: 5.0
+    q_theta: 2.0
+    r_v: 1.0
+    r_omega: 0.5
+
+# ── Pure MPC Controller ────────────────────────────────────────────────────
+mpc_controller_node:
+  ros__parameters:
+    use_sim_time: true
+    control_rate: 20.0
+    trajectory_amplitude: 0.5
+    trajectory_frequency: 0.15
+    dt: 0.05
+    v_max: 0.22
+    omega_max: 2.84
+    horizon: 10
+    d_safe: 0.30
+    q_x: 20.0
+    q_y: 20.0
+    q_theta: 5.0
+    r_v: 1.0
+    r_omega: 0.5
+    du_weight_v: 0.15
+    du_weight_omega: 0.6
+
+# ── Adaptive MPC Controller ────────────────────────────────────────────────
+adaptive_mpc_controller_node:
+  ros__parameters:
+    use_sim_time: true
+    control_rate: 20.0
+    trajectory_amplitude: 0.5
+    trajectory_frequency: 0.15
+    dt: 0.05
+    v_max: 0.22
+    omega_max: 2.84
+    horizon: 10
+    d_safe: 0.30
+    q_x: 30.0
+    q_y: 30.0
+    q_theta: 5.0
+    r_v: 0.1
+    r_omega: 0.1
+
+# ── Hybrid Controller ──────────────────────────────────────────────────────
+hybrid_controller:
+  ros__parameters:
+    use_sim_time: true
+    control_rate: 20.0
+    trajectory_amplitude: 0.5
+    trajectory_frequency: 0.2
+    trajectory_duration: 120.0
+    dt: 0.05
+    mpc_horizon: 10
+    d_safe: 0.35
+    v_max: 0.22
+    omega_max: 2.84
+    use_hybrid: true
+    lookahead_dist: 0.40
+    cruise_speed: 0.10
+    waypoint_reach_dist: 0.08
+
+# ── Obstacle Publisher ──────────────────────────────────────────────────────
+obstacle_publisher:
+  ros__parameters:
+    use_sim_time: true
+
+# ── Twist Relay (TwistStamped → Twist for Gazebo bridge) ────────────────────
+twist_relay:
+  ros__parameters:
+    use_sim_time: true

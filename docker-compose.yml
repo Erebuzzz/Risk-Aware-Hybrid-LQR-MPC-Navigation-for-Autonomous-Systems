@@ -1,0 +1,50 @@
+# =============================================================================
+# Risk-Aware Hybrid LQR-MPC Navigation — Docker Compose
+# =============================================================================
+# Usage:
+#   docker compose up                    # Jazzy (default)
+#   docker compose up humble             # Humble
+#   docker compose --profile gui up      # With GUI (requires xhost + on Linux)
+#
+# GUI on Linux:  xhost +local:docker
+# GUI on WSL2:   Uses WSLg automatically
+# =============================================================================
+
+services:
+  # ── Jazzy (GZ Sim Harmonic) ──────────────────────────────────────────────
+  jazzy:
+    build:
+      context: .
+      args:
+        ROS_DISTRO: jazzy
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - TURTLEBOT3_MODEL=burger
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
+    stdin_open: true
+    tty: true
+    command: >
+      ros2 launch hybrid_nav turtlebot3_hybrid.launch.py
+
+  # ── Humble (GZ Sim Garden) ──────────────────────────────────────────────
+  humble:
+    build:
+      context: .
+      args:
+        ROS_DISTRO: humble
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - TURTLEBOT3_MODEL=burger
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
+    stdin_open: true
+    tty: true
+    profiles:
+      - humble
+    command: >
+      ros2 launch hybrid_nav turtlebot3_hybrid.launch.py

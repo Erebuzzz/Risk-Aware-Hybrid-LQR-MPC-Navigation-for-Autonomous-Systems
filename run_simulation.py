@@ -7,10 +7,11 @@ Run the LQR, MPC, and Hybrid simulations without ROS2 dependencies.
 Useful for testing, validation, and generating plots.
 
 Usage:
-    python run_simulation.py --mode lqr
-    python run_simulation.py --mode mpc
+    python run_simulation.py --mode lqr --trajectory figure8
+    python run_simulation.py --mode mpc --trajectory clover3 --scenario dense
+    python run_simulation.py --mode adaptive
     python run_simulation.py --mode hybrid --trajectory clover3
-    python run_simulation.py --mode compare
+    python run_simulation.py --mode compare --trajectory rose4
 """
 
 import argparse
@@ -19,9 +20,10 @@ import sys
 
 import numpy as np
 
-# Add the package to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src", "hybrid_controller"))
+# Add the package to path (works without pip install -e)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ros2_ws", "src", "hybrid_controller"))
 
+from hybrid_controller.controllers.adaptive_mpc_controller import AdaptiveMPCController
 from hybrid_controller.controllers.hybrid_blender import BlendingSupervisor
 from hybrid_controller.controllers.lqr_controller import LQRController
 from hybrid_controller.controllers.mpc_controller import MPCController, Obstacle
@@ -30,16 +32,64 @@ from hybrid_controller.controllers.yaw_stabilizer import YawStabilizer
 from hybrid_controller.logging.simulation_logger import SimulationLogger
 from hybrid_controller.models.actuator_dynamics import ActuatorDynamics, ActuatorParams
 from hybrid_controller.models.differential_drive import DifferentialDriveRobot
-from hybrid_controller.models.linearization import Linearizer
-from hybrid_controller.trajectory.reference_generator import (
-    ReferenceTrajectoryGenerator,
-)
 from hybrid_controller.trajectory.trajectory_factory import TrajectoryFactory
 from hybrid_controller.utils.visualization import Visualizer
 
+PLOTS_ROOT = os.path.join("Output", "Plots")
+
+
+def _plots_sub(*parts: str) -> str:
+    return os.path.join(PLOTS_ROOT, *parts)
+
+
+def _generate_factory_trajectory(
+    trajectory_type: str, duration: float, dt: float
+) -> tuple:
+    """
+    Discrete reference from TrajectoryFactory with index-based accessors.
+
+    Returns:
+        trajectory: [t, px, py, theta, v, omega]
+        N: sample count
+        get_reference_at_index: (k) -> (x_ref [3], u_ref [2])
+        get_trajectory_segment: (start_k, length) -> (x_refs, u_refs) padded
+    """
+    factory = TrajectoryFactory()
+    trajectory = factory.generate(
+        trajectory_type,
+        duration=duration,
+        dt=dt,
+        A=2.0,
+        seed=42 if trajectory_type == "random_wp" else None,
+    )
+    ref_states = trajectory[:, 1:4]
+    ref_controls = trajectory[:, 4:6]
+    n_samples = len(trajectory)
+
+    def get_reference_at_index(index: int):
+        idx = min(max(index, 0), n_samples - 1)
+        return ref_states[idx].copy(), ref_controls[min(idx, n_samples - 2)].copy()
+
+    def get_trajectory_segment(start_index: int, length: int):
+        end_index = min(start_index + length, n_samples)
+        x_refs = ref_states[start_index:end_index].copy()
+        u_refs = ref_controls[
+            start_index : min(start_index + length - 1, n_samples - 1)
+        ].copy()
+        while len(x_refs) < length:
+            x_refs = np.vstack([x_refs, x_refs[-1:]])
+        while len(u_refs) < length - 1:
+            u_refs = np.vstack([u_refs, u_refs[-1:]])
+        return x_refs, u_refs
+
+    return trajectory, n_samples, get_reference_at_index, get_trajectory_segment
+
 
 def run_lqr_simulation(
-    duration: float = 20.0, dt: float = 0.02, visualize: bool = True
+    duration: float = 20.0,
+    dt: float = 0.02,
+    visualize: bool = True,
+    trajectory_type: str = "figure8",
 ) -> dict:
     """
     Run LQR trajectory tracking simulation.
@@ -48,6 +98,8 @@ def run_lqr_simulation(
         duration: Simulation duration (seconds)
         dt: Time step (seconds)
         visualize: Generate plots
+        trajectory_type: Geometry label (matches ``--trajectory``); plots go under
+            ``Output/Plots/LQR/<trajectory_type>/``.
 
     Returns:
         Dictionary with simulation results
@@ -60,33 +112,35 @@ def run_lqr_simulation(
     robot = DifferentialDriveRobot(
         v_max=2.0, omega_max=3.0
     )  # Increased limits to prevent saturation
-    traj_gen = ReferenceTrajectoryGenerator(A=2.0, a=0.5, dt=dt)
     lqr = LQRController(
         Q_diag=[15.0, 15.0, 8.0], R_diag=[0.1, 0.1], dt=dt, v_max=2.0, omega_max=3.0
     )
     logger = SimulationLogger(log_dir="logs", log_level="INFO", node_name="lqr_sim")
 
-    # Generate reference trajectory
-    trajectory = traj_gen.generate(duration)
-    N = len(trajectory)
+    trajectory, n_samples, get_reference_at_index, _ = _generate_factory_trajectory(
+        trajectory_type, duration, dt
+    )
 
-    print(f"Generated {N} trajectory points over {duration}s")
+    print(
+        f"Trajectory: {trajectory_type} | "
+        f"Generated {n_samples} trajectory points over {duration}s"
+    )
 
     # Initialize state at the reference trajectory's starting point
-    x_ref_init, _ = traj_gen.get_reference_at_index(0)
+    x_ref_init, _ = get_reference_at_index(0)
     x = x_ref_init.copy()  # Start at reference position and heading
 
     # Storage
-    states = np.zeros((N, 3))
-    controls = np.zeros((N - 1, 2))
-    errors = np.zeros((N - 1, 3))
+    states = np.zeros((n_samples, 3))
+    controls = np.zeros((n_samples - 1, 2))
+    errors = np.zeros((n_samples - 1, 3))
 
     states[0] = x
 
     # Simulation loop
-    for k in range(N - 1):
+    for k in range(n_samples - 1):
         # Get reference
-        x_ref, u_ref = traj_gen.get_reference_at_index(k)
+        x_ref, u_ref = get_reference_at_index(k)
 
         # Compute LQR control
         u, error = lqr.compute_control_at_operating_point(x, x_ref, u_ref)
@@ -122,18 +176,23 @@ def run_lqr_simulation(
 
     # Visualization
     if visualize:
-        viz = Visualizer(output_dir="outputs")
+        lqr_dir = _plots_sub("LQR", trajectory_type)
+        os.makedirs(lqr_dir, exist_ok=True)
+        viz = Visualizer(output_dir=lqr_dir)
         ref_states = trajectory[:, 1:4]  # [px, py, theta]
 
         viz.plot_trajectory(
             states,
             ref_states,
             title="LQR Trajectory Tracking",
-            save_path="outputs/lqr_tracking.png",
+            save_path=os.path.join(lqr_dir, "lqr_tracking.png"),
         )
 
         viz.plot_tracking_error(
-            errors, dt, title="LQR Tracking Error", save_path="outputs/lqr_error.png"
+            errors,
+            dt,
+            title="LQR Tracking Error",
+            save_path=os.path.join(lqr_dir, "lqr_error.png"),
         )
 
         viz.plot_control_inputs(
@@ -142,10 +201,10 @@ def run_lqr_simulation(
             v_max=2.0,
             omega_max=3.0,
             title="LQR Control Inputs",
-            save_path="outputs/lqr_control.png",
+            save_path=os.path.join(lqr_dir, "lqr_control.png"),
         )
 
-        print("\nPlots saved to outputs/")
+        print(f"\nPlots saved to {lqr_dir}")
 
     return {
         "states": states,
@@ -163,6 +222,7 @@ def run_mpc_simulation(
     with_obstacles: bool = True,
     visualize: bool = True,
     scenario: str = "default",
+    trajectory_type: str = "figure8",
 ) -> dict:
     """
     Run MPC obstacle avoidance simulation.
@@ -182,7 +242,6 @@ def run_mpc_simulation(
 
     # Initialize components
     robot = DifferentialDriveRobot(v_max=2.0, omega_max=3.0)
-    traj_gen = ReferenceTrajectoryGenerator(A=2.0, a=0.5, dt=dt, T_blend=0.5)
     # OPTIMIZED MPC PARAMETERS for industry-standard tolerances
     # Target: heading ≤5°, latency ≤50ms, slack ≤5
     mpc = MPCController(
@@ -238,18 +297,21 @@ def run_mpc_simulation(
                 Obstacle(x=-0.5, y=-1.0, radius=0.25),
                 Obstacle(x=1.5, y=-0.3, radius=0.15),
             ]
-        print(f"Scenario: {scenario} | Added {len(obstacles)} obstacles")
+        print(
+            f"Scenario: {scenario} | Trajectory: {trajectory_type} | "
+            f"Added {len(obstacles)} obstacles"
+        )
     else:
         obstacles = []
 
-    # Generate reference trajectory
-    trajectory = traj_gen.generate(duration)
-    N = len(trajectory)
+    trajectory, N, get_reference_at_index, get_trajectory_segment = (
+        _generate_factory_trajectory(trajectory_type, duration, dt)
+    )
 
     print(f"Generated {N} trajectory points over {duration}s")
 
     # Initialize state at the reference trajectory's starting point
-    x_ref_init, _ = traj_gen.get_reference_at_index(0)
+    x_ref_init, _ = get_reference_at_index(0)
     x = x_ref_init.copy()  # Start at reference position and heading
 
     # Storage
@@ -265,11 +327,7 @@ def run_mpc_simulation(
 
     for k in range(N - 1):
         # Get reference segment
-        x_refs, u_refs = traj_gen.get_trajectory_segment(k, mpc.N + 1)
-
-        # MPC control at lower rate
-        if k % mpc_rate == 0:
-            solution = mpc.solve_with_ltv(x, x_refs, u_refs, obstacles)
+        x_refs, u_refs = get_trajectory_segment(k, mpc.N + 1)
             solve_times.append(solution.solve_time_ms)
 
             if solution.slack_used:
@@ -327,8 +385,11 @@ def run_mpc_simulation(
     logger.finalize()
 
     # Visualization
+    plot_scenario = scenario if with_obstacles else "no_obstacles"
     if visualize:
-        viz = Visualizer(output_dir="outputs")
+        mpc_dir = _plots_sub("MPC", trajectory_type, plot_scenario)
+        os.makedirs(mpc_dir, exist_ok=True)
+        viz = Visualizer(output_dir=mpc_dir)
         ref_states = trajectory[:, 1:4]
 
         obstacle_dicts = [{"x": o.x, "y": o.y, "radius": o.radius} for o in obstacles]
@@ -339,11 +400,14 @@ def run_mpc_simulation(
             obstacle_dicts,
             mpc.d_safe,
             title="MPC Obstacle Avoidance",
-            save_path="outputs/mpc_obstacle_avoidance.png",
+            save_path=os.path.join(mpc_dir, "mpc_obstacle_avoidance.png"),
         )
 
         viz.plot_tracking_error(
-            errors, dt, title="MPC Tracking Error", save_path="outputs/mpc_error.png"
+            errors,
+            dt,
+            title="MPC Tracking Error",
+            save_path=os.path.join(mpc_dir, "mpc_error.png"),
         )
 
         viz.plot_control_inputs(
@@ -352,10 +416,10 @@ def run_mpc_simulation(
             v_max=2.0,
             omega_max=3.0,
             title="MPC Control Inputs",
-            save_path="outputs/mpc_control.png",
+            save_path=os.path.join(mpc_dir, "mpc_control.png"),
         )
 
-        print("\nPlots saved to outputs/")
+        print(f"\nPlots saved to {mpc_dir}")
 
     return {
         "states": states,
@@ -368,7 +432,205 @@ def run_mpc_simulation(
     }
 
 
-def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
+def run_adaptive_simulation(
+    duration: float = 20.0,
+    dt: float = 0.02,
+    visualize: bool = True,
+    scenario: str = "default",
+    trajectory_type: str = "figure8",
+) -> dict:
+    """
+    Run Adaptive NMPC (CasADi) trajectory tracking with obstacle avoidance.
+
+    Uses the same reference generator and scenario layout as ``run_mpc_simulation``.
+    """
+    print("=" * 60)
+    print("Adaptive MPC Obstacle Avoidance Simulation")
+    print("=" * 60)
+
+    robot = DifferentialDriveRobot(v_max=2.0, omega_max=3.0)
+    ampc = AdaptiveMPCController(
+        prediction_horizon=5,
+        terminal_horizon=3,
+        Q_diag=[30.0, 30.0, 5.0],
+        R_diag=[0.1, 0.1],
+        d_safe=0.3,
+        v_max=2.0,
+        omega_max=3.0,
+        dt=dt,
+        enable_adaptation=True,
+        adaptation_gamma=0.005,
+    )
+
+    yaw_stabilizer = YawStabilizer(kp=3.0, ki=0.1, kd=0.5, dt=dt, omega_max=3.0)
+    BOOTSTRAP_STEPS = 10
+
+    logger = SimulationLogger(
+        log_dir="logs", log_level="INFO", node_name="adaptive_mpc_sim"
+    )
+
+    if scenario == "sparse":
+        obstacles = [
+            Obstacle(x=1.5, y=0.8, radius=0.2),
+        ]
+    elif scenario == "dense":
+        obstacles = [
+            Obstacle(x=1.0, y=0.5, radius=0.2),
+            Obstacle(x=-0.5, y=-1.0, radius=0.25),
+            Obstacle(x=1.5, y=-0.3, radius=0.15),
+            Obstacle(x=-1.5, y=0.5, radius=0.2),
+            Obstacle(x=0.0, y=0.8, radius=0.15),
+        ]
+    elif scenario == "corridor":
+        obstacles = [
+            Obstacle(x=1.0, y=0.3, radius=0.15),
+            Obstacle(x=1.0, y=0.7, radius=0.15),
+            Obstacle(x=-0.8, y=-0.7, radius=0.15),
+            Obstacle(x=-0.3, y=-1.2, radius=0.15),
+        ]
+    else:
+        obstacles = [
+            Obstacle(x=1.0, y=0.5, radius=0.2),
+            Obstacle(x=-0.5, y=-1.0, radius=0.25),
+            Obstacle(x=1.5, y=-0.3, radius=0.15),
+        ]
+    print(
+        f"Scenario: {scenario} | Trajectory: {trajectory_type} | "
+        f"Added {len(obstacles)} obstacles"
+    )
+
+    trajectory, N, get_reference_at_index, _ = _generate_factory_trajectory(
+        trajectory_type, duration, dt
+    )
+
+    print(f"Generated {N} trajectory points over {duration}s")
+
+    x_ref_init, _ = get_reference_at_index(0)
+    x = x_ref_init.copy()
+
+    states = np.zeros((N, 3))
+    controls = np.zeros((N - 1, 2))
+    errors = np.zeros((N - 1, 3))
+    solve_times = []
+
+    states[0] = x
+
+    mpc_rate = 5
+    solution = None
+
+    for k in range(N - 1):
+        x_prev = x.copy()
+        x_ref_k, u_ref_k = get_reference_at_index(k)
+
+        if k < BOOTSTRAP_STEPS:
+            omega_cmd = yaw_stabilizer.compute(x[2], x_ref_k[2], float(u_ref_k[1]))
+            u = np.array([float(u_ref_k[0]), omega_cmd], dtype=float)
+            solve_time = 0.0
+        else:
+            if solution is None or k % mpc_rate == 0:
+                lookahead = min(ampc.N_ext + 1, N - k)
+                x_refs = np.array(
+                    [get_reference_at_index(k + j)[0] for j in range(lookahead)]
+                )
+                u_refs = np.array(
+                    [
+                        get_reference_at_index(min(k + j, N - 2))[1][:2]
+                        for j in range(lookahead - 1)
+                    ]
+                )
+                solution = ampc.solve_tracking(x, x_refs, u_refs, obstacles)
+                solve_times.append(solution.solve_time_ms)
+
+            u = solution.optimal_control
+            solve_time = solution.solve_time_ms
+
+        error = x - x_ref_k
+        error[2] = robot.normalize_angle(error[2])
+
+        logger.log_state(k, x, x_ref_k, error)
+        logger.log_control(k, u, "AdaptiveMPC", solve_time)
+
+        x = robot.simulate_step(x, u, dt)
+
+        if k > 0 and k >= BOOTSTRAP_STEPS:
+            ampc.adapt_parameters(x, x_prev, u)
+
+        states[k + 1] = x
+        controls[k] = u
+        errors[k] = error
+
+        if k % 100 == 0:
+            error_norm = np.linalg.norm(error[:2])
+            print(f"  k={k:4d}: error_norm={error_norm:.4f}, solve={solve_time:.2f}ms")
+
+    mean_error = np.mean(np.linalg.norm(errors[:, :2], axis=1))
+    final_error = np.linalg.norm(errors[-1, :2])
+    mean_solve_time = np.mean(solve_times) if solve_times else 0.0
+
+    print(f"\nResults:")
+    print(f"  Mean tracking error: {mean_error:.4f} m")
+    print(f"  Final tracking error: {final_error:.4f} m")
+    print(f"  Mean Adaptive MPC solve time: {mean_solve_time:.2f} ms")
+
+    collision_count = 0
+    for state in states:
+        for obs in obstacles:
+            if obs.is_collision(state[0], state[1], ampc.d_safe):
+                collision_count += 1
+                break
+
+    print(f"  Collision events: {collision_count}")
+
+    logger.finalize()
+
+    if visualize:
+        ampc_dir = _plots_sub("AdaptiveMPC", trajectory_type, scenario)
+        os.makedirs(ampc_dir, exist_ok=True)
+        viz = Visualizer(output_dir=ampc_dir)
+        ref_states = trajectory[:, 1:4]
+        obstacle_dicts = [{"x": o.x, "y": o.y, "radius": o.radius} for o in obstacles]
+
+        viz.plot_with_obstacles(
+            states,
+            ref_states,
+            obstacle_dicts,
+            ampc.d_safe,
+            title="Adaptive MPC Obstacle Avoidance",
+            save_path=os.path.join(ampc_dir, "adaptive_mpc_obstacle_avoidance.png"),
+        )
+
+        viz.plot_tracking_error(
+            errors,
+            dt,
+            title="Adaptive MPC Tracking Error",
+            save_path=os.path.join(ampc_dir, "adaptive_mpc_error.png"),
+        )
+
+        viz.plot_control_inputs(
+            controls,
+            dt,
+            v_max=2.0,
+            omega_max=3.0,
+            title="Adaptive MPC Control Inputs",
+            save_path=os.path.join(ampc_dir, "adaptive_mpc_control.png"),
+        )
+
+        print(f"\nPlots saved to {ampc_dir}")
+
+    return {
+        "states": states,
+        "controls": controls,
+        "errors": errors,
+        "reference": trajectory[:, 1:4],
+        "mean_error": mean_error,
+        "collision_count": collision_count,
+        "mean_solve_time": mean_solve_time,
+    }
+
+
+def run_comparison(
+    duration: float = 20.0, dt: float = 0.02, trajectory_type: str = "figure8"
+) -> None:
     """
     Run comparison between LQR and MPC with obstacles.
     """
@@ -386,20 +648,20 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
     # Run LQR (without visibility of obstacles)
     print("\n--- Running LQR (obstacle-unaware) ---")
     robot = DifferentialDriveRobot(v_max=2.0, omega_max=3.0)
-    traj_gen = ReferenceTrajectoryGenerator(A=2.0, a=0.5, dt=dt)
     lqr = LQRController(
         Q_diag=[15.0, 15.0, 8.0], R_diag=[0.1, 0.1], dt=dt, v_max=2.0, omega_max=3.0
     )
-    trajectory = traj_gen.generate(duration)
-    N = len(trajectory)
+    trajectory, N, get_reference_at_index, get_trajectory_segment = (
+        _generate_factory_trajectory(trajectory_type, duration, dt)
+    )
 
-    x_ref_init, _ = traj_gen.get_reference_at_index(0)
+    x_ref_init, _ = get_reference_at_index(0)
     x_lqr = x_ref_init.copy()
     lqr_states = np.zeros((N, 3))
     lqr_states[0] = x_lqr
 
     for k in range(N - 1):
-        x_ref, u_ref = traj_gen.get_reference_at_index(k)
+        x_ref, u_ref = get_reference_at_index(k)
         u, _ = lqr.compute_control_at_operating_point(x_lqr, x_ref, u_ref)
         x_lqr = robot.simulate_step(x_lqr, u, dt)
         lqr_states[k + 1] = x_lqr
@@ -415,7 +677,6 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
 
     # Run MPC (obstacle-aware) with optimized weights
     print("\n--- Running MPC (obstacle-aware) ---")
-    traj_gen.generate(duration)  # Reset
     mpc = MPCController(
         horizon=6,
         Q_diag=[15.0, 15.0, 50.0],  # Optimized heading
@@ -434,7 +695,7 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
     mpc_states[0] = x_mpc
 
     for k in range(N - 1):
-        x_refs, u_refs = traj_gen.get_trajectory_segment(k, mpc.N + 1)
+        x_refs, u_refs = get_trajectory_segment(k, mpc.N + 1)
         solution = mpc.solve_with_ltv(x_mpc, x_refs, u_refs, obstacles)
         x_mpc = robot.simulate_step(x_mpc, solution.optimal_control, dt)
         mpc_states[k + 1] = x_mpc
@@ -448,7 +709,10 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
     print(f"MPC collision events: {mpc_collisions}")
 
     # Comparison plot
-    viz = Visualizer(output_dir="outputs")
+    compare_dir = _plots_sub("Compare", trajectory_type)
+    os.makedirs(compare_dir, exist_ok=True)
+    comparison_path = os.path.join(compare_dir, "comparison.png")
+    viz = Visualizer(output_dir=compare_dir)
     viz.plot_comparison(
         lqr_states,
         mpc_states,
@@ -456,10 +720,10 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
         obstacle_dicts,
         d_safe=0.3,
         title="LQR vs MPC: Obstacle Avoidance Comparison",
-        save_path="outputs/comparison.png",
+        save_path=comparison_path,
     )
 
-    print("\nComparison plot saved to outputs/comparison.png")
+    print(f"\nComparison plot saved to {comparison_path}")
 
 
 def run_hybrid_simulation(
@@ -485,7 +749,7 @@ def run_hybrid_simulation(
         visualize: Generate plots
         scenario: Obstacle scenario
         trajectory_type: Trajectory family to generate
-        output_dir: Optional directory where hybrid plots should be saved
+        output_dir: Override plot directory (default: Output/Plots/Hybrid/<trajectory>/<scenario>/)
         actuator_params: Optional parameters for hardware realism (lag, delay, noise)
 
     Returns:
@@ -813,7 +1077,9 @@ def run_hybrid_simulation(
 
     # --- Visualization ---
     if visualize:
-        run_output_dir = output_dir or os.path.join("outputs", trajectory_type)
+        run_output_dir = output_dir or _plots_sub(
+            "Hybrid", trajectory_type, scenario
+        )
         os.makedirs(run_output_dir, exist_ok=True)
         viz = Visualizer(output_dir=run_output_dir)
 
@@ -922,7 +1188,7 @@ def run_hybrid_simulation(
         )
         plt.close(fig)
 
-        print("\nPlots saved to outputs/")
+        print(f"\nPlots saved to {run_output_dir}")
 
     return {
         "states": states,
@@ -952,7 +1218,7 @@ def main():
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["lqr", "mpc", "compare", "hybrid"],
+        choices=["lqr", "mpc", "adaptive", "compare", "hybrid"],
         default="lqr",
         help="Simulation mode",
     )
@@ -974,7 +1240,7 @@ def main():
         "--output-dir",
         type=str,
         default=None,
-        help="Directory for generated plots. Defaults to outputs/<trajectory>",
+        help="Override plot directory (default: Output/Plots/Hybrid/<trajectory>/<scenario>)",
     )
     parser.add_argument("--no-plot", action="store_true", help="Disable plotting")
     parser.add_argument(
@@ -986,7 +1252,7 @@ def main():
     args = parser.parse_args()
 
     # Create output directories
-    os.makedirs("outputs", exist_ok=True)
+    os.makedirs(PLOTS_ROOT, exist_ok=True)
     os.makedirs("logs", exist_ok=True)
 
     # Configure realism
@@ -1002,7 +1268,10 @@ def main():
 
     if args.mode == "lqr":
         run_lqr_simulation(
-            duration=args.duration, dt=args.dt, visualize=not args.no_plot
+            duration=args.duration,
+            dt=args.dt,
+            visualize=not args.no_plot,
+            trajectory_type=args.trajectory,
         )
     elif args.mode == "mpc":
         run_mpc_simulation(
@@ -1010,9 +1279,20 @@ def main():
             dt=args.dt,
             visualize=not args.no_plot,
             scenario=args.scenario,
+            trajectory_type=args.trajectory,
+        )
+    elif args.mode == "adaptive":
+        run_adaptive_simulation(
+            duration=args.duration,
+            dt=args.dt,
+            visualize=not args.no_plot,
+            scenario=args.scenario,
+            trajectory_type=args.trajectory,
         )
     elif args.mode == "compare":
-        run_comparison(duration=args.duration, dt=args.dt)
+        run_comparison(
+            duration=args.duration, dt=args.dt, trajectory_type=args.trajectory
+        )
     elif args.mode == "hybrid":
         run_hybrid_simulation(
             duration=args.duration,

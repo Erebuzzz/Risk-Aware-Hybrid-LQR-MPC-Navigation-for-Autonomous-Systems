@@ -1,55 +1,37 @@
-# Environment
-.env
-.venv/
-venv/
-env/
-
-# Python
+# Compiled Python files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.so
-.pytest_cache/
 
-# Simulation Outputs
-logs/
-outputs/
-*.log
+# Output directories
+Output/
 
-# IDE
+# ROS2 Colcon build directories
+build/
+install/
+log/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Virtual environments
+venv/
+env/
+.env/
+.venv/
+env.bak/
+venv.bak/
+
+# Project specifics — legacy paths kept so local clutter stays untracked if present
+evaluation/results/*.json
+evaluation/results/*.csv
+evaluation/results/*.txt
+!evaluation/results/.gitkeep
+
+# IDEs and Editors
 .vscode/
 .idea/
-
-# Distribution
-build/
-dist/
-*.egg-info/
-
-# Loose result/log dumps at root
-*.txt
-stat_err.txt
-runner_output.txt
-commit_status.txt
-hybrid_error.txt
-
-# Simulation raw data (timestamped dumps)
-logs/*.json
-logs/*.csv
-logs/*.log
-
-# LaTeX build artifacts
-*.aux
-*.toc
-*.out
-*.fls
-*.fdb_latexmk
-*.synctex.gz
-
-# Compiled PDFs (keep sources only)
-docs/*.pdf
-
-# Jupyter / IPython
-.ipynb_checkpoints/
-To_do.md
-WORKPLAN_PHASE_2.md
+*.swp
+*.swo
+.DS_Store
