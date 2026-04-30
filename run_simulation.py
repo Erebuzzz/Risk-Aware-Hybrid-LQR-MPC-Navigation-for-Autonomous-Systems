@@ -19,8 +19,8 @@ import sys
 
 import numpy as np
 
-# Add the package to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src", "hybrid_controller"))
+# Add the package to path (works without pip install -e)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ros2_ws", "src", "hybrid_controller"))
 
 from hybrid_controller.controllers.hybrid_blender import BlendingSupervisor
 from hybrid_controller.controllers.lqr_controller import LQRController
@@ -122,18 +122,18 @@ def run_lqr_simulation(
 
     # Visualization
     if visualize:
-        viz = Visualizer(output_dir="outputs")
+        viz = Visualizer(output_dir="Output/Plots")
         ref_states = trajectory[:, 1:4]  # [px, py, theta]
 
         viz.plot_trajectory(
             states,
             ref_states,
             title="LQR Trajectory Tracking",
-            save_path="outputs/lqr_tracking.png",
+            save_path="Output/Plots/LQR/lqr_tracking.png",
         )
 
         viz.plot_tracking_error(
-            errors, dt, title="LQR Tracking Error", save_path="outputs/lqr_error.png"
+            errors, dt, title="LQR Tracking Error", save_path="Output/Plots/LQR/lqr_error.png"
         )
 
         viz.plot_control_inputs(
@@ -142,10 +142,10 @@ def run_lqr_simulation(
             v_max=2.0,
             omega_max=3.0,
             title="LQR Control Inputs",
-            save_path="outputs/lqr_control.png",
+            save_path="Output/Plots/LQR/lqr_control.png",
         )
 
-        print("\nPlots saved to outputs/")
+        print("\nPlots saved to Output/Plots/LQR/")
 
     return {
         "states": states,
@@ -328,7 +328,7 @@ def run_mpc_simulation(
 
     # Visualization
     if visualize:
-        viz = Visualizer(output_dir="outputs")
+        viz = Visualizer(output_dir="Output/Plots")
         ref_states = trajectory[:, 1:4]
 
         obstacle_dicts = [{"x": o.x, "y": o.y, "radius": o.radius} for o in obstacles]
@@ -339,11 +339,11 @@ def run_mpc_simulation(
             obstacle_dicts,
             mpc.d_safe,
             title="MPC Obstacle Avoidance",
-            save_path="outputs/mpc_obstacle_avoidance.png",
+            save_path="Output/Plots/MPC/mpc_obstacle_avoidance.png",
         )
 
         viz.plot_tracking_error(
-            errors, dt, title="MPC Tracking Error", save_path="outputs/mpc_error.png"
+            errors, dt, title="MPC Tracking Error", save_path="Output/Plots/MPC/mpc_error.png"
         )
 
         viz.plot_control_inputs(
@@ -352,10 +352,10 @@ def run_mpc_simulation(
             v_max=2.0,
             omega_max=3.0,
             title="MPC Control Inputs",
-            save_path="outputs/mpc_control.png",
+            save_path="Output/Plots/MPC/mpc_control.png",
         )
 
-        print("\nPlots saved to outputs/")
+        print("\nPlots saved to Output/Plots/MPC/")
 
     return {
         "states": states,
@@ -448,7 +448,7 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
     print(f"MPC collision events: {mpc_collisions}")
 
     # Comparison plot
-    viz = Visualizer(output_dir="outputs")
+    viz = Visualizer(output_dir="Output/Plots")
     viz.plot_comparison(
         lqr_states,
         mpc_states,
@@ -456,10 +456,10 @@ def run_comparison(duration: float = 20.0, dt: float = 0.02) -> None:
         obstacle_dicts,
         d_safe=0.3,
         title="LQR vs MPC: Obstacle Avoidance Comparison",
-        save_path="outputs/comparison.png",
+        save_path="Output/Plots/comparison.png",
     )
 
-    print("\nComparison plot saved to outputs/comparison.png")
+    print("\nComparison plot saved to Output/Plots/comparison.png")
 
 
 def run_hybrid_simulation(
@@ -813,7 +813,7 @@ def run_hybrid_simulation(
 
     # --- Visualization ---
     if visualize:
-        run_output_dir = output_dir or os.path.join("outputs", trajectory_type)
+        run_output_dir = output_dir or os.path.join("Output", "Plots", "Hybrid", trajectory_type)
         os.makedirs(run_output_dir, exist_ok=True)
         viz = Visualizer(output_dir=run_output_dir)
 
@@ -922,7 +922,7 @@ def run_hybrid_simulation(
         )
         plt.close(fig)
 
-        print("\nPlots saved to outputs/")
+        print("\nPlots saved to Output/Plots/Hybrid/")
 
     return {
         "states": states,
@@ -974,7 +974,7 @@ def main():
         "--output-dir",
         type=str,
         default=None,
-        help="Directory for generated plots. Defaults to outputs/<trajectory>",
+        help="Directory for generated plots. Defaults to Output/Plots/<trajectory>",
     )
     parser.add_argument("--no-plot", action="store_true", help="Disable plotting")
     parser.add_argument(
@@ -986,7 +986,7 @@ def main():
     args = parser.parse_args()
 
     # Create output directories
-    os.makedirs("outputs", exist_ok=True)
+    os.makedirs("Output/Plots", exist_ok=True)
     os.makedirs("logs", exist_ok=True)
 
     # Configure realism

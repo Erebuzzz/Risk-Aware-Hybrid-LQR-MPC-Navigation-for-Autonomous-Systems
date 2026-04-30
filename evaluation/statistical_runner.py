@@ -28,7 +28,7 @@ import numpy as np
 
 # Add project root and source directories to path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-src_dir = os.path.join(project_root, "src", "hybrid_controller")
+src_dir = os.path.join(project_root, "ros2_ws", "src", "hybrid_controller")
 for p in [project_root, src_dir]:
     if p not in sys.path:
         sys.path.insert(0, p)

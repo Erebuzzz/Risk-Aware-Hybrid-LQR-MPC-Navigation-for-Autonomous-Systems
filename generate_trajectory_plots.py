@@ -2,15 +2,15 @@ import sys
 import os
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'src', 'hybrid_controller')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'ros2_ws', 'src', 'hybrid_controller')))
 
 from hybrid_controller.trajectory.trajectory_factory import TrajectoryFactory
 from hybrid_controller.utils.visualization import Visualizer
 
 def generate_trajectory_plots():
-    os.makedirs('outputs', exist_ok=True)
+    os.makedirs('Output/Plots/Trajectories', exist_ok=True)
     factory = TrajectoryFactory()
-    viz = Visualizer(output_dir='outputs')
+    viz = Visualizer(output_dir='Output/Plots/Trajectories')
     
     trajectory_types = ['figure8', 'clover3', 'rose4', 'spiral', 'random_wp']
     
@@ -35,9 +35,9 @@ def generate_trajectory_plots():
                 states=padded_states, 
                 reference=reference, 
                 title=f"{traj_type.capitalize()} Trajectory Profile", 
-                save_path=f"outputs/{traj_type}_trajectory.png"
+                save_path=f"Output/Plots/Trajectories/{traj_type}_trajectory.png"
             )
-            print(f" -> Exported outputs/{traj_type}_trajectory.png")
+            print(f" -> Exported Output/Plots/Trajectories/{traj_type}_trajectory.png")
             
         except Exception as e:
             print(f"Failed to generate {traj_type}: {e}")
