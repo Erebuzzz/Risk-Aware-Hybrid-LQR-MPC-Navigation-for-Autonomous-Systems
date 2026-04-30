@@ -11,8 +11,8 @@ Usage:
 
 Output:
     - Console table: mean ± std for each metric × controller
-    - CSV: evaluation/results/statistical_results.csv
-    - JSON: evaluation/results/statistical_results.json
+    - CSV: Output/Plots/Evaluation/statistical_results.csv
+    - JSON: Output/Plots/Evaluation/statistical_results.json
 """
 
 import argparse
@@ -602,7 +602,7 @@ def run_statistical_validation(
     scenario_type: str = "random",
     base_seed: int = 42,
     verbose: bool = True,
-    output_dir: str = "evaluation/results",
+    output_dir: str = "Output/Plots/Evaluation",
 ) -> Dict[str, AggregatedResults]:
     """
     Run full Monte Carlo validation across all controller modes.
@@ -892,7 +892,7 @@ def main():
     )
     parser.add_argument("--seed", type=int, default=42, help="Base random seed")
     parser.add_argument(
-        "--output", type=str, default="evaluation/results", help="Output directory"
+        "--output", type=str, default="Output/Plots/Evaluation", help="Output directory"
     )
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
 

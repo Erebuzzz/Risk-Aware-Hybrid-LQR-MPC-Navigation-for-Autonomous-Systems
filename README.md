@@ -108,18 +108,26 @@ make sim
 
 ## Output Structure
 
-All generated plots, charts, and trajectory profiles are cleanly organized in the `Output/Plots/` directory.
+All generated plots use **``Output/Plots/<Mode>/<path>/``** on disk (relative to the repo root): **``<path>``** is the trajectory family for LQR, Compare, and Trajectories; for MPC, Adaptive MPC, and Hybrid it is **``<trajectory>/<scenario>``** so runs with different environments do not overwrite each other.
 
 ```text
 Output/
 └── Plots/
-    ├── AdaptiveMPC/    # Plots generated from Adaptive MPC runs
-    ├── Hybrid/         # Plots generated from Hybrid LQR-MPC runs
-    ├── LQR/            # Plots generated from pure LQR runs
-    ├── MPC/            # Plots generated from pure MPC runs
-    └── Trajectories/   # Baseline geometric trajectory profiles
+    ├── LQR/
+    │   └── <trajectory>/
+    ├── MPC/
+    │   └── <trajectory>/<scenario>/
+    ├── AdaptiveMPC/
+    │   └── <trajectory>/<scenario>/
+    ├── Hybrid/
+    │   └── <trajectory>/<scenario>/
+    ├── Compare/
+    │   └── <trajectory>/
+    ├── Trajectories/
+    │   └── <trajectory>/
+    └── Evaluation/
 ```
-*Note: Statistical evaluation metrics (JSON, CSV) are stored in `evaluation/results/`.*
+*Note: Evaluation artifacts default to `Output/Plots/Evaluation/` (runners accept `--output` to override).*
 
 ## Modifying Parameters
 

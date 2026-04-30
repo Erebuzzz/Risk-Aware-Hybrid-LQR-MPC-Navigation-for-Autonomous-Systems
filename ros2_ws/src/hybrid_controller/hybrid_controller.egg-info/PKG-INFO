@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: hybrid_controller
+Version: 1.0.0
+Summary: Risk-Aware Hybrid LQR-MPC Controller Library
+Maintainer: Kshitiz and Agolika
+Maintainer-email: kshitiz23@iiserb.ac.in
+License: MIT
+Requires-Dist: setuptools
+Requires-Dist: numpy
+Requires-Dist: scipy
+Dynamic: license
+Dynamic: maintainer
+Dynamic: maintainer-email
+Dynamic: requires-dist
+Dynamic: summary

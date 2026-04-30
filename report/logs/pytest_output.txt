@@ -1,0 +1,16 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.1, pytest-7.4.3, pluggy-1.6.0 -- C:\Users\kshit\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: D:\Risk-Aware-Hybrid-LQR-MPC-Navigation-for-Autonomous-Systems
+plugins: anyio-4.12.1, dash-3.2.0, hypothesis-6.151.10, asyncio-0.21.1, cov-7.0.0
+asyncio: mode=Mode.STRICT
+collecting ... collected 5 items
+
+tests/test_mpc_solution.py::test_mpc_solution_has_feasible_field PASSED  [ 20%]
+tests/test_mpc_solution.py::test_mpc_solution_feasible_defaults_true PASSED [ 40%]
+tests/test_mpc_solution.py::test_mpc_solve_returns_feasible_solution PASSED [ 60%]
+tests/test_mpc_solution.py::test_mpc_fallback_is_feasible PASSED         [ 80%]
+tests/test_mpc_solution.py::test_adaptive_mpc_solution_has_feasible PASSED [100%]
+
+============================= 5 passed in 34.51s ==============================

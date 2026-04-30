@@ -25,13 +25,15 @@ class Visualizer:
     - Animated simulation playback
     """
     
-    def __init__(self, output_dir: str = "Output/Plots"):
+    def __init__(self, output_dir: Optional[str] = None):
         """
         Initialize visualizer.
         
         Args:
             output_dir: Directory to save output figures
         """
+        if output_dir is None:
+            output_dir = os.path.join("Output", "Plots")
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         

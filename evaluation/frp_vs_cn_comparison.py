@@ -52,7 +52,7 @@ def run_comparison(
     dt: float = 0.02,
     noise_std: float = 0.05,
     base_seed: int = 42,
-    output_dir: str = 'evaluation/results/frp_vs_cn',
+    output_dir: str = 'Output/Plots/Evaluation/frp_vs_cn',
     verbose: bool = True
 ) -> Dict[str, Any]:
     """
@@ -347,7 +347,7 @@ def main():
                         help='Position noise std (meters)')
     parser.add_argument('--seed', type=int, default=42,
                         help='Base random seed')
-    parser.add_argument('--output', type=str, default='evaluation/results/frp_vs_cn',
+    parser.add_argument('--output', type=str, default='Output/Plots/Evaluation/frp_vs_cn',
                         help='Output directory')
     
     args = parser.parse_args()

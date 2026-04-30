@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,17 +8,15 @@ TRAJECTORIES = ["clover3", "rose4", "spiral", "random_wp", "figure8"]
 SCENARIOS = ["default", "dense", "moving"]
 MODE = "hybrid"
 
-OUTPUT_DIR = Path("outputs")
+OUTPUT_DIR = Path("Output") / "Plots" / "Hybrid"
 
 
-def get_trajectory_output_dir(traj: str) -> Path:
-    return OUTPUT_DIR / traj
+def run_output_dir(traj: str, scenario: str) -> Path:
+    return OUTPUT_DIR / traj / scenario
 
 
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    for traj in TRAJECTORIES:
-        get_trajectory_output_dir(traj).mkdir(parents=True, exist_ok=True)
 
     print(f"Starting Master Hybrid Validation Suite")
     print(
@@ -28,12 +24,12 @@ def main():
     )
 
     for traj in TRAJECTORIES:
-        traj_output_dir = get_trajectory_output_dir(traj)
-
         for scenario in SCENARIOS:
+            out_dir = run_output_dir(traj, scenario)
+            out_dir.mkdir(parents=True, exist_ok=True)
             print(f"\n===========================================================")
             print(f"Running Hybrid Navigation | Path: {traj} | Env: {scenario}")
-            print(f"Output Directory: {traj_output_dir}")
+            print(f"Output Directory: {out_dir}")
             print(f"===========================================================")
 
             cmd = [
@@ -45,8 +41,6 @@ def main():
                 traj,
                 "--scenario",
                 scenario,
-                "--output-dir",
-                str(traj_output_dir),
             ]
 
             try:
@@ -60,7 +54,7 @@ def main():
                 print(e.stderr)
                 continue
 
-            expected_file = traj_output_dir / f"hybrid_{traj}_{scenario}_trajectory.png"
+            expected_file = out_dir / f"hybrid_{traj}_{scenario}_trajectory.png"
             if expected_file.exists():
                 print(f"[SUCCESS] Exported plot to {expected_file}")
             else:

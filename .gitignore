@@ -23,8 +23,7 @@ env/
 env.bak/
 venv.bak/
 
-# Project specifics
-outputs/
+# Project specifics — legacy paths kept so local clutter stays untracked if present
 evaluation/results/*.json
 evaluation/results/*.csv
 evaluation/results/*.txt
