@@ -10,7 +10,7 @@ This repository implements a modular, risk-aware hybrid control framework for au
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 - [Overview](#overview)
 - [Controller Architecture](#controller-architecture)
 - [Performance Comparison](#performance-comparison)
@@ -23,7 +23,7 @@ This repository implements a modular, risk-aware hybrid control framework for au
 
 ---
 
-## 🚀 Overview
+## Overview
 
 Autonomous navigation in obstacle-dense environments involves a fundamental trade-off:
 - **Pure LQR** is computationally cheap and provides excellent tracking in open space but cannot handle obstacle constraints.
@@ -33,7 +33,7 @@ Our project addresses this by designing a **hybrid architecture** that runs LQR 
 
 ---
 
-## 🧠 Controller Architecture
+## Controller Architecture
 
 We implemented four distinct controller variants for validation:
 
@@ -60,7 +60,7 @@ We implemented four distinct controller variants for validation:
 
 ---
 
-## 📊 Performance Comparison
+## Performance Comparison
 
 Performance on a figure-8 trajectory (20 seconds, $\Delta t = 0.02$s) with 3 circular obstacles:
 
@@ -75,7 +75,7 @@ Performance on a figure-8 trajectory (20 seconds, $\Delta t = 0.02$s) with 3 cir
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 .
@@ -163,14 +163,14 @@ To test the controllers on a simulated Turtlebot3 Burger in Gazebo, use Docker. 
 
 ---
 
-## 📝 Results & Reporting
+## Results & Reporting
 
 - The full evaluation report detailing our design choices, mathematical formulation, failures, fixes, and successes can be found at **[`report/report.pdf`](report/report.pdf)** (compiled from `report/report.tex`).
 - Every controller node writes a CSV-formatted telemetry log to `logs/` with columns: `Tick, X, Y, Theta, Error, V, Omega, Mode` to enable post-run debugging.
 
 ---
 
-## 🔮 Future Scope
+## Future Scope
 
 - **Hardware Deployment**: Port the Dockerized ROS2 nodes to a physical Turtlebot3 using real LiDAR-based clustering.
 - **Dynamic Obstacle Prediction**: Integrate a Kalman filter or constant-velocity model to predict obstacle trajectories.
