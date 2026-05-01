@@ -17,12 +17,12 @@ SHELL ["/bin/bash", "-c"]
 
 # ── System dependencies ─────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-pip \
-        ros-${ROS_DISTRO}-turtlebot3-gazebo \
-        ros-${ROS_DISTRO}-turtlebot3-description \
-        ros-${ROS_DISTRO}-ros-gz \
-        ros-${ROS_DISTRO}-ros-gz-bridge \
-        ros-${ROS_DISTRO}-ros-gz-sim \
+    python3-pip \
+    ros-${ROS_DISTRO}-turtlebot3-gazebo \
+    ros-${ROS_DISTRO}-turtlebot3-description \
+    ros-${ROS_DISTRO}-ros-gz \
+    ros-${ROS_DISTRO}-ros-gz-bridge \
+    ros-${ROS_DISTRO}-ros-gz-sim \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Python dependencies ─────────────────────────────────────────────────────
@@ -36,6 +36,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # ── Copy workspace ──────────────────────────────────────────────────────────
 COPY ros2_ws /ros2_ws
+COPY src /ros2_ws/src
 WORKDIR /ros2_ws
 
 # ── Install hybrid_controller as editable package ───────────────────────────
@@ -46,9 +47,10 @@ RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
     python3 /usr/bin/colcon build --symlink-install
 
 # ── Entrypoint ──────────────────────────────────────────────────────────────
+# CRLF from Windows checkouts breaks kernel shebang parsing ("no such file or directory").
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-ENTRYPOINT ["/docker-entrypoint.sh"]
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/bin/bash", "/docker-entrypoint.sh"]
 
 # Default: launch hybrid controller
 CMD ["ros2", "launch", "hybrid_nav", "turtlebot3_hybrid.launch.py"]
