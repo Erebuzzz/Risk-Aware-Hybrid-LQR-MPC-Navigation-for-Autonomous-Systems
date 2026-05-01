@@ -1,8 +1,79 @@
 # Risk-Aware Hybrid LQR-MPC Navigation for Autonomous Systems
 
-This repository implements a modular, risk-aware hybrid control framework for autonomous navigation. It combines the high-frequency trajectory tracking of a Linear Quadratic Regulator (LQR) with the constraint-handling safety of Model Predictive Control (MPC).
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![ROS2](https://img.shields.io/badge/ROS2-Jazzy-green)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+This repository implements a modular, risk-aware hybrid control framework for autonomous navigation on differential-drive robots. It combines the high-frequency trajectory tracking of a **Linear Quadratic Regulator (LQR)** with the constraint-handling safety of **Model Predictive Control (MPC)**.
 
 **Authors**: Kshitiz Kumar Sinha, Agolika BM
+
+---
+
+## 📖 Table of Contents
+- [Overview](#overview)
+- [Controller Architecture](#controller-architecture)
+- [Performance Comparison](#performance-comparison)
+- [Repository Structure](#repository-structure)
+- [Installation & Setup](#installation--setup)
+  - [1. Offline Simulation (Local Python)](#1-offline-simulation-local-python)
+  - [2. ROS2 3D Simulation (Docker)](#2-ros2-3d-simulation-docker)
+- [Results & Reporting](#results--reporting)
+- [Future Scope](#future-scope)
+
+---
+
+## 🚀 Overview
+
+Autonomous navigation in obstacle-dense environments involves a fundamental trade-off:
+- **Pure LQR** is computationally cheap and provides excellent tracking in open space but cannot handle obstacle constraints.
+- **MPC** can naturally encode obstacle constraints but solving optimization problems at high frequency is computationally expensive.
+
+Our project addresses this by designing a **hybrid architecture** that runs LQR as the default high-frequency tracker and smoothly blends in MPC only when the robot's risk level rises due to obstacle proximity. The blending weight is computed from a sigmoid-based risk function with hysteresis and rate limiting to prevent chattering.
+
+---
+
+## 🧠 Controller Architecture
+
+We implemented four distinct controller variants for validation:
+
+1. **LQR Controller (Baseline)**
+   - Linearizes the non-linear unicycle dynamics around a time-varying reference trajectory.
+   - Computes optimal feedback gain by solving the Discrete Algebraic Riccati Equation (DARE).
+   - Achieves sub-centimeter accuracy in obstacle-free space.
+
+2. **Tube MPC (CVXPY / OSQP)**
+   - Solves a finite-horizon optimization problem with linearized obstacle avoidance constraints.
+   - Includes slack variables with high penalties to handle infeasibility in tight spaces.
+
+3. **Adaptive Nonlinear MPC (CasADi / IPOPT)**
+   - Solves the *exact* nonlinear dynamics for better constraint satisfaction.
+   - Uses an online LMS filter to estimate unknown friction/slip parameters.
+   - Incorporates an extended terminal horizon with a pre-computed LQR feedback policy.
+
+4. **Hybrid LQR-MPC Blended Controller**
+   - **Core Contribution:** Continuously blends LQR and MPC outputs using a four-stage pipeline:
+     1. **Risk Assessment**: Based on distance to obstacles and predictive trajectory risk.
+     2. **Sigmoid Mapping**: Translates risk into a blending weight $w(t) \in [0, 1]$.
+     3. **Hysteresis Deadband**: Prevents oscillatory switching.
+     4. **Asymmetric Rate Limiting**: Ensures rapid obstacle response but smooth path re-acquisition.
+
+---
+
+## 📊 Performance Comparison
+
+Performance on a figure-8 trajectory (20 seconds, $\Delta t = 0.02$s) with 3 circular obstacles:
+
+| Metric | LQR | Tube MPC | Adaptive NMPC | Hybrid |
+|:---|:---:|:---:|:---:|:---:|
+| **Mean Error (m)** | 0.005 | 1.638 | 1.282 | **0.218** |
+| **Final Error (m)** | 0.003 | 2.269 | 1.978 | **0.056** |
+| **Mean Solve Time (ms)** | <1 | 163 | 145 | **102** |
+| **Collisions** | N/A | 163 | 355 | **0** |
+
+*Note: The Hybrid controller achieved the best of both worlds—near-LQR tracking accuracy in safe zones with effective obstacle avoidance, and zero recorded collisions in this scenario.*
+
+---
 
 ## 📁 Repository Structure
 
@@ -19,6 +90,8 @@ This repository implements a modular, risk-aware hybrid control framework for au
 ├── docker-compose.yml      # Orchestration for running the ROS2 environment.
 └── Dockerfile              # Docker container definition (ROS2 Jazzy + Dependencies).
 ```
+
+---
 
 ## ⚙️ Installation & Setup
 
@@ -88,7 +161,18 @@ To test the controllers on a simulated Turtlebot3 Burger in Gazebo, use Docker. 
    docker compose run --rm jazzy ros2 launch hybrid_nav turtlebot3_adaptive_mpc.launch.py
    ```
 
-## 📊 Results & Reporting
+---
 
-- The evaluation report detailing our failures, fixes, and successes can be found at `report/report.pdf` (compiled from `report/report.tex`).
-- Video demonstrations of the ROS2 implementations are linked within the report.
+## 📝 Results & Reporting
+
+- The full evaluation report detailing our design choices, mathematical formulation, failures, fixes, and successes can be found at **[`report/report.pdf`](report/report.pdf)** (compiled from `report/report.tex`).
+- Every controller node writes a CSV-formatted telemetry log to `logs/` with columns: `Tick, X, Y, Theta, Error, V, Omega, Mode` to enable post-run debugging.
+
+---
+
+## 🔮 Future Scope
+
+- **Hardware Deployment**: Port the Dockerized ROS2 nodes to a physical Turtlebot3 using real LiDAR-based clustering.
+- **Dynamic Obstacle Prediction**: Integrate a Kalman filter or constant-velocity model to predict obstacle trajectories.
+- **C++ Code Generation**: Use CasADi's C code generation to achieve >50 Hz control rates on embedded hardware.
+- **Formal Safety Guarantees**: Integrate Control Barrier Functions (CBFs) to provide provable safety certificates alongside the MPC constraints.
