@@ -1,0 +1,6 @@
+[2026-04-30 23:18:40.206] [INFO] [lqr_sim] SimulationLogger initialized. Log file: logs\simulation_20260430_231840.log
+[2026-04-30 23:18:41.890] [INFO] [lqr_sim] Simulation completed | total_entries=1998 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260430_231840 | max_error_norm=0.014431645902308774 | mean_error_norm=0.007825962025089648 | final_error_norm=0.0031156572012350377
+[2026-04-30 23:18:41.916] [INFO] [lqr_sim] State history exported to logs\states_20260430_231840.csv
+[2026-04-30 23:18:41.926] [INFO] [lqr_sim] Control history exported to logs\controls_20260430_231840.csv
+[2026-04-30 23:18:42.060] [INFO] [lqr_sim] Logs exported to logs\simulation_20260430_231840.json
+[2026-04-30 23:18:42.063] [INFO] [lqr_sim] Logging session finalized. Summary: {'total_entries': 1998, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260430_231840', 'max_error_norm': 0.014431645902308774, 'mean_error_norm': 0.007825962025089648, 'final_error_norm': 0.0031156572012350377}
