@@ -1,0 +1,54 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+.pytest_cache/
+
+# Simulation Outputs
+logs/
+outputs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Distribution
+build/
+dist/
+*.egg-info/
+
+# Loose result/log dumps at root
+*.txt
+stat_err.txt
+runner_output.txt
+commit_status.txt
+hybrid_error.txt
+
+# Simulation raw data (timestamped dumps)
+logs/*.json
+logs/*.csv
+logs/*.log
+
+# LaTeX build artifacts
+*.aux
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Compiled PDFs (keep sources only)
+docs/*.pdf
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
