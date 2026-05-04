@@ -1,0 +1,6 @@
+[2026-04-30 23:24:57.422] [INFO] [adaptive_mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260430_232457.log
+[2026-04-30 23:25:26.508] [INFO] [adaptive_mpc_sim] Simulation completed | total_entries=1998 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260430_232457 | max_error_norm=2.6306407912830863 | mean_error_norm=1.8386531697530915 | final_error_norm=1.9780940751582727
+[2026-04-30 23:25:26.532] [INFO] [adaptive_mpc_sim] State history exported to logs\states_20260430_232457.csv
+[2026-04-30 23:25:26.540] [INFO] [adaptive_mpc_sim] Control history exported to logs\controls_20260430_232457.csv
+[2026-04-30 23:25:26.655] [INFO] [adaptive_mpc_sim] Logs exported to logs\simulation_20260430_232457.json
+[2026-04-30 23:25:26.656] [INFO] [adaptive_mpc_sim] Logging session finalized. Summary: {'total_entries': 1998, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260430_232457', 'max_error_norm': 2.6306407912830863, 'mean_error_norm': 1.8386531697530915, 'final_error_norm': 1.9780940751582727}

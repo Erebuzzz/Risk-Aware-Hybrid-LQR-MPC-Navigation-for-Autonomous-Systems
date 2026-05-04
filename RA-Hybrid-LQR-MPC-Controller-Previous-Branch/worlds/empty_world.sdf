@@ -1,0 +1,97 @@
+<?xml version="1.0" ?>
+<!--
+  Empty World SDF
+  ===============
+  
+  Simple ground plane environment for Phase 1 LQR tracking.
+-->
+<sdf version="1.8">
+  <world name="empty_world">
+    
+    <!-- Physics settings -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    
+    <!-- Plugins -->
+    <plugin filename="libgz-sim-physics-system.so" 
+            name="gz::sim::systems::Physics"/>
+    <plugin filename="libgz-sim-user-commands-system.so"
+            name="gz::sim::systems::UserCommands"/>
+    <plugin filename="libgz-sim-scene-broadcaster-system.so"
+            name="gz::sim::systems::SceneBroadcaster"/>
+    
+    <!-- Lighting -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+    
+    <!-- Ground Plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>20 20</size>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>20 20</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+    <!-- Grid lines for visualization (optional) -->
+    <model name="grid_origin">
+      <static>true</static>
+      <pose>0 0 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="x_axis">
+          <geometry>
+            <box><size>5 0.02 0.01</size></box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+          <pose>2.5 0 0 0 0 0</pose>
+        </visual>
+        <visual name="y_axis">
+          <geometry>
+            <box><size>0.02 5 0.01</size></box>
+          </geometry>
+          <material>
+            <ambient>0 1 0 1</ambient>
+            <diffuse>0 1 0 1</diffuse>
+          </material>
+          <pose>0 2.5 0 0 0 0</pose>
+        </visual>
+      </link>
+    </model>
+    
+  </world>
+</sdf>

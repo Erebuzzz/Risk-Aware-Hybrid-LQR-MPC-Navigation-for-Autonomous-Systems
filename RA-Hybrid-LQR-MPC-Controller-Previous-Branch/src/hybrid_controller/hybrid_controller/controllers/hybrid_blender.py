@@ -63,13 +63,13 @@ class BlendingSupervisor:
     """
     
     def __init__(self,
-                 k_sigmoid: float = 20.0,
-                 risk_threshold: float = 0.25,
-                 dw_max: float = 50.0,
+                 k_sigmoid: float = 10.0,
+                 risk_threshold: float = 0.3,
+                 dw_max: float = 2.0,
                  hysteresis_band: float = 0.05,
-                 solver_time_limit: float = 150.0,
+                 solver_time_limit: float = 5.0,
                  feasibility_decay: float = 0.8,
-                 feasibility_margin_threshold: float = 100.0,
+                 feasibility_margin_threshold: float = 0.1,
                  dt: float = 0.02):
         """
         Initialize blending supervisor.
@@ -164,24 +164,21 @@ class BlendingSupervisor:
     
     def _apply_rate_limit(self, w_target: float) -> float:
         """
-        Apply ASYMMETRIC rate limiting.
-        FAST-ATTACK: Snap to MPC instantly when risk spikes.
-        SLOW-DECAY: Smoothly return to LQR when safe.
-        """
-        # FAST ATTACK (e.g., 20.0). Goes from 0 to 1 in ~0.05 seconds.
-        # This saves you from crashing.
-        dw_max_up = 20.0 
+        Apply rate limiting to enforce |dw/dt| <= dw_max.
         
-        # SLOW DECAY (e.g., 2.0). Goes from 1 to 0 in ~0.5 seconds.
-        # This prevents the robot from violently jerking back to the path.
-        dw_max_down = self.dw_max 
+        This is the key anti-chatter mechanism. By bounding the
+        derivative of w(t), we guarantee Lipschitz continuity
+        and prevent discontinuous jumps in the control signal.
         
-        # Determine if we are ramping up (danger) or ramping down (safe)
-        if w_target > self._w_prev:
-            max_change = dw_max_up * self.dt
-        else:
-            max_change = dw_max_down * self.dt
+        Guarantee: ||u_blend(t+dt) - u_blend(t)|| is bounded.
+        
+        Args:
+            w_target: Desired weight after hysteresis
             
+        Returns:
+            Rate-limited weight
+        """
+        max_change = self.dw_max * self.dt
         w_new = np.clip(
             w_target,
             self._w_prev - max_change,
@@ -194,11 +191,56 @@ class BlendingSupervisor:
                                       solver_time_ms: float,
                                       feasibility_margin: float = 0.0) -> Tuple[float, bool]:
         """
-        TEMPORARY DEBUG OVERRIDE: 
-        Ignore all solver errors, timeouts, and slack margins.
-        Force the supervisor to use the raw weight.
+        Apply feasibility-aware degradation with consecutive escalation.
+        
+        Degradation escalates with consecutive failures:
+            1 failure:  w *= decay
+            2 failures: w *= decay^2
+            n failures: w *= decay^n  (exponential ramp-down)
+        
+        Also responds to high feasibility_margin (slack usage).
+        
+        Args:
+            w: Current weight after rate limiting
+            solver_status: MPC solver status string
+            solver_time_ms: MPC solve time in milliseconds
+            feasibility_margin: Max slack magnitude from MPC solution
+            
+        Returns:
+            Tuple of (adjusted_weight, feasibility_ok)
         """
-        return w, True
+        feasibility_ok = True
+        
+        # Check for infeasibility
+        if solver_status not in ('optimal', 'optimal_inaccurate'):
+            feasibility_ok = False
+            self._infeasible_count += 1
+            self._consecutive_infeasible += 1
+            # Exponential escalation: decay^n for n consecutive failures
+            escalated_decay = self.feasibility_decay ** self._consecutive_infeasible
+            w *= escalated_decay
+        
+        # Check for excessive solve time
+        elif solver_time_ms > self.solver_time_limit:
+            feasibility_ok = False
+            self._consecutive_infeasible += 1
+            # Proportional decay based on how much over limit
+            overshoot = solver_time_ms / self.solver_time_limit
+            decay = max(self.feasibility_decay, 1.0 / overshoot)
+            w *= decay
+        
+        # Check for high slack usage (constraints barely feasible)
+        elif feasibility_margin > self.feasibility_margin_threshold:
+            # Proportional reduction based on how much slack was needed
+            margin_ratio = min(feasibility_margin / (self.feasibility_margin_threshold * 5), 1.0)
+            w *= (1.0 - 0.3 * margin_ratio)  # Up to 30% reduction
+            # Don't reset consecutive counter — slack is a warning sign
+        
+        else:
+            # All good: reset consecutive counter
+            self._consecutive_infeasible = 0
+        
+        return w, feasibility_ok
     
     def compute_weight(self, risk: float, 
                        solver_status: str = 'optimal',

@@ -1,0 +1,51 @@
+# =============================================================================
+# Risk-Aware Hybrid LQR-MPC Navigation Controller Parameters
+# =============================================================================
+
+# Simulation parameters
+simulation:
+  dt: 0.02                    # Sampling time (50 Hz for LQR)
+  duration: 20.0              # Total simulation duration (seconds)
+  
+# Trajectory parameters (Figure-8 / Lemniscate)
+trajectory:
+  amplitude: 2.0              # Spatial size of trajectory (meters)
+  frequency: 0.5              # Angular frequency (rad/s)
+  
+# Robot parameters
+robot:
+  wheel_base: 0.3             # Distance between wheels (meters)
+  max_linear_velocity: 1.0    # v_max (m/s)
+  max_angular_velocity: 1.5   # omega_max (rad/s)
+  
+# LQR controller parameters
+lqr:
+  Q_diag: [10.0, 10.0, 1.0]   # State error weights [x, y, theta]
+  R_diag: [0.1, 0.1]          # Control effort weights [v, omega]
+  control_rate: 50.0          # Control loop rate (Hz)
+  
+# MPC controller parameters
+mpc:
+  horizon: 10                 # Prediction horizon N
+  Q_diag: [10.0, 10.0, 1.0]   # State tracking weights
+  R_diag: [0.1, 0.1]          # Control effort weights
+  P_diag: [20.0, 20.0, 2.0]   # Terminal cost weights
+  d_safe: 0.3                 # Safety distance from obstacles (meters)
+  slack_penalty: 1000.0       # Slack variable penalty (rho)
+  control_rate: 20.0          # MPC rate (Hz)
+  solver: "ECOS"              # CVXPY solver (ECOS, SCS, OSQP)
+  
+# Obstacle parameters
+obstacles:
+  warning_distance: 0.5       # Distance to trigger warning (meters)
+  inflation_radius: 0.15      # Robot footprint inflation (meters)
+  
+# Logging parameters
+logging:
+  level: "INFO"               # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_states: true            # Log robot states
+  log_controls: true          # Log control inputs
+  log_errors: true            # Log errors with process identification
+  export_csv: true            # Export state history to CSV
+  export_json: true           # Export structured logs to JSON
+  output_dir: "logs"          # Log output directory

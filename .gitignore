@@ -4,8 +4,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Output directories
-Output/
 
 # ROS2 Colcon build directories
 build/
@@ -13,7 +11,6 @@ install/
 log/
 ros2_ws/build/
 ros2_ws/install/
-ros2_ws/log/
 
 # Virtual environments
 venv/
@@ -24,9 +21,6 @@ env.bak/
 venv.bak/
 
 # Project specifics — legacy paths kept so local clutter stays untracked if present
-evaluation/results/*.json
-evaluation/results/*.csv
-evaluation/results/*.txt
 !evaluation/results/.gitkeep
 
 # IDEs and Editors
@@ -35,3 +29,5 @@ evaluation/results/*.txt
 *.swp
 *.swo
 .DS_Store
+
+LCS-334-434-684/

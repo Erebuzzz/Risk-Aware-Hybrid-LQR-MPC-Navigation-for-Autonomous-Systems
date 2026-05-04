@@ -35,7 +35,7 @@ from hybrid_controller.models.differential_drive import DifferentialDriveRobot
 from hybrid_controller.trajectory.trajectory_factory import TrajectoryFactory
 from hybrid_controller.utils.visualization import Visualizer
 
-PLOTS_ROOT = os.path.join("Output", "Plots")
+PLOTS_ROOT = os.path.join("results")
 
 
 def _plots_sub(*parts: str) -> str:
@@ -99,7 +99,7 @@ def run_lqr_simulation(
         dt: Time step (seconds)
         visualize: Generate plots
         trajectory_type: Geometry label (matches ``--trajectory``); plots go under
-            ``Output/Plots/LQR/<trajectory_type>/``.
+            ``results/LQR/<trajectory_type>/``.
 
     Returns:
         Dictionary with simulation results
@@ -328,12 +328,24 @@ def run_mpc_simulation(
     for k in range(N - 1):
         # Get reference segment
         x_refs, u_refs = get_trajectory_segment(k, mpc.N + 1)
-            solve_times.append(solution.solve_time_ms)
+        # We only run the MPC optimization every `mpc_rate` steps to simulate
+        # a real-time system where the solver runs slower than the control loop.
+        # However, for this simple simulation, we run it every step but use
+        # warm starting.
+        solution = mpc.solve(
+            x0=x,
+            x_refs=x_refs,
+            u_refs=u_refs,
+            obstacles=obstacles,
+            use_soft_constraints=True
+        )
 
-            if solution.slack_used:
-                logger.log_constraint_event(
-                    k, "slack_activated", {"reason": "feasibility"}
-                )
+        solve_times.append(solution.solve_time_ms)
+
+        if solution.slack_used:
+            logger.log_constraint_event(
+                k, "slack_activated", {"reason": "feasibility"}
+            )
 
         u = solution.optimal_control
         controller_name = "MPC"
@@ -749,7 +761,7 @@ def run_hybrid_simulation(
         visualize: Generate plots
         scenario: Obstacle scenario
         trajectory_type: Trajectory family to generate
-        output_dir: Override plot directory (default: Output/Plots/Hybrid/<trajectory>/<scenario>/)
+        output_dir: Override plot directory (default: results/Hybrid/<trajectory>/<scenario>/)
         actuator_params: Optional parameters for hardware realism (lag, delay, noise)
 
     Returns:
@@ -804,13 +816,11 @@ def run_hybrid_simulation(
         hysteresis_band=0.08,
         solver_time_limit=50.0,
         feasibility_decay=0.8,
-        # Diagnostic dominance bands: w < 0.25 is mostly LQR, w > 0.75 is mostly MPC.
-        # The previous w < 0.1 threshold made the reported LQR-active region look
-        # artificially small even when LQR still contributed most of the blended input.
-        lqr_dominant_threshold=0.25,
-        mpc_dominant_threshold=0.75,
         dt=dt,
     )
+    # Diagnostic dominance bands: w < 0.25 is mostly LQR, w > 0.75 is mostly MPC.
+    blender._lqr_dominant_threshold = 0.25
+    blender._mpc_dominant_threshold = 0.75
 
     logger = SimulationLogger(log_dir="logs", log_level="INFO", node_name="hybrid_sim")
 
@@ -1240,7 +1250,7 @@ def main():
         "--output-dir",
         type=str,
         default=None,
-        help="Override plot directory (default: Output/Plots/Hybrid/<trajectory>/<scenario>)",
+        help="Override plot directory (default: results/Hybrid/<trajectory>/<scenario>)",
     )
     parser.add_argument("--no-plot", action="store_true", help="Disable plotting")
     parser.add_argument(
