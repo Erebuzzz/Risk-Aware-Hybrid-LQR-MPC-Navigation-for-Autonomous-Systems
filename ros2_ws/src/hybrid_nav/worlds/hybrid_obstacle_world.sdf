@@ -149,10 +149,10 @@
       <pose>0.30 0.35 0.125 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><cylinder><radius>0.10</radius><length>0.25</length></cylinder></geometry>
+          <geometry><cylinder><radius>0.05</radius><length>0.25</length></cylinder></geometry>
         </collision>
         <visual name="visual">
-          <geometry><cylinder><radius>0.10</radius><length>0.25</length></cylinder></geometry>
+          <geometry><cylinder><radius>0.05</radius><length>0.25</length></cylinder></geometry>
           <material>
             <ambient>0.9 0.2 0.2 1</ambient>
             <diffuse>0.9 0.2 0.2 1</diffuse>
@@ -167,10 +167,10 @@
       <pose>-0.35 -0.35 0.125 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><cylinder><radius>0.10</radius><length>0.25</length></cylinder></geometry>
+          <geometry><cylinder><radius>0.05</radius><length>0.25</length></cylinder></geometry>
         </collision>
         <visual name="visual">
-          <geometry><cylinder><radius>0.10</radius><length>0.25</length></cylinder></geometry>
+          <geometry><cylinder><radius>0.05</radius><length>0.25</length></cylinder></geometry>
           <material>
             <ambient>0.9 0.6 0.1 1</ambient>
             <diffuse>0.9 0.6 0.1 1</diffuse>
@@ -185,10 +185,10 @@
       <pose>0.55 0.00 0.125 0 0 0</pose>
       <link name="link">
         <collision name="collision">
-          <geometry><cylinder><radius>0.08</radius><length>0.25</length></cylinder></geometry>
+          <geometry><cylinder><radius>0.02</radius><length>0.25</length></cylinder></geometry>
         </collision>
         <visual name="visual">
-          <geometry><cylinder><radius>0.08</radius><length>0.25</length></cylinder></geometry>
+          <geometry><cylinder><radius>0.02</radius><length>0.25</length></cylinder></geometry>
           <material>
             <ambient>0.2 0.6 0.9 1</ambient>
             <diffuse>0.2 0.6 0.9 1</diffuse>

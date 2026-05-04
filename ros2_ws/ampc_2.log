@@ -1,0 +1,42 @@
+[INFO] [launch]: All log files can be found below /home/agolika/.ros/log/2026-04-30-07-38-21-532292-LAPTOP-TAQNSDCF-3757
+[INFO] [launch]: Default logging verbosity is set to INFO
+urdf_file_name : turtlebot3_burger.urdf
+urdf_file_name : turtlebot3_burger.urdf
+[INFO] [gazebo-1]: process started with pid [3760]
+[INFO] [gazebo-2]: process started with pid [3761]
+[INFO] [robot_state_publisher-3]: process started with pid [3763]
+[INFO] [create-4]: process started with pid [3765]
+[INFO] [parameter_bridge-5]: process started with pid [3766]
+[INFO] [adaptive_mpc_controller_node-6]: process started with pid [3767]
+[INFO] [obstacle_publisher_node-7]: process started with pid [3768]
+[INFO] [rviz2-8]: process started with pid [3769]
+[create-4] [INFO] [1777534701.996810523] [ros_gz_sim]: Requesting list of world names.
+[robot_state_publisher-3] [INFO] [1777534701.997717645] [robot_state_publisher]: Robot initialized
+[rviz2-8] [INFO] [1777534702.190414189] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-8] [INFO] [1777534702.190659663] [rviz2]: OpenGl version: 4.5 (GLSL 4.5)
+[rviz2-8] [INFO] [1777534702.229602688] [rviz2]: Stereo is NOT SUPPORTED
+[obstacle_publisher_node-7] [INFO] [1777534702.449320652] [obstacle_publisher]: Obstacle publisher started: 3 obstacles
+[create-4] [INFO] [1777534702.613598654] [ros_gz_sim]: Entity creation successful.
+[INFO] [create-4]: process has finished cleanly [pid 3765]
+[parameter_bridge-5] [INFO] [1777534703.016809098] [ros_gz_bridge]: Creating GZ->ROS Bridge: [clock (gz.msgs.Clock) -> clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534703.019986513] [ros_gz_bridge]: Creating GZ->ROS Bridge: [joint_states (gz.msgs.Model) -> joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534703.025474284] [ros_gz_bridge]: Creating GZ->ROS Bridge: [odom (gz.msgs.Odometry) -> odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534703.031710043] [ros_gz_bridge]: Creating GZ->ROS Bridge: [tf (gz.msgs.Pose_V) -> tf (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534703.035835199] [ros_gz_bridge]: Creating ROS->GZ Bridge: [cmd_vel (geometry_msgs/msg/TwistStamped) -> cmd_vel (gz.msgs.Twist)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534703.037503064] [ros_gz_bridge]: Creating GZ->ROS Bridge: [imu (gz.msgs.IMU) -> imu (sensor_msgs/msg/Imu)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534703.039157551] [ros_gz_bridge]: Creating GZ->ROS Bridge: [scan (gz.msgs.LaserScan) -> scan (sensor_msgs/msg/LaserScan)] (Lazy 0)
+[adaptive_mpc_controller_node-6] Traceback (most recent call last):
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/hybrid_nav/adaptive_mpc_controller_node", line 33, in <module>
+[adaptive_mpc_controller_node-6]     sys.exit(load_entry_point('hybrid_nav==0.1.0', 'console_scripts', 'adaptive_mpc_controller_node')())
+[adaptive_mpc_controller_node-6]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/nodes/adaptive_mpc_controller_node.py", line 286, in main
+[adaptive_mpc_controller_node-6]     node = AdaptiveMPCControllerNode()
+[adaptive_mpc_controller_node-6]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/nodes/adaptive_mpc_controller_node.py", line 81, in __init__
+[adaptive_mpc_controller_node-6]     self.mpc = AdaptiveMPCController(
+[adaptive_mpc_controller_node-6]                ^^^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6] TypeError: AdaptiveMPCController.__init__() got an unexpected keyword argument 'horizon'
+[parameter_bridge-5] [INFO] [1777534703.822900023] [ros_gz_bridge]: Passing message from ROS geometry_msgs/msg/TwistStamped to Gazebo gz.msgs.Twist (showing msg only once per type)
+[ERROR] [adaptive_mpc_controller_node-6]: process has died [pid 3767, exit code 1, cmd '/home/agolika/hybrid_ws/install/hybrid_nav/lib/hybrid_nav/adaptive_mpc_controller_node --ros-args -r __node:=adaptive_mpc_controller --params-file /tmp/launch_params_q1s81akt'].
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="turtlebot3_burger"]/link[@name="base_scan"]/sensor[@name="hls_lfcd_lds"]/gz_frame_id:/opt/ros/jazzy/share/turtlebot3_gazebo/models/turtlebot3_burger/model.sdf:L141]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-2] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="turtlebot3_burger"]/link[@name="base_scan"]/sensor[@name="hls_lfcd_lds"]/gz_frame_id:<data-string>:L163]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].

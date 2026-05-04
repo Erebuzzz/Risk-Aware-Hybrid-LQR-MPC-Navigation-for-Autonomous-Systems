@@ -1,0 +1,2038 @@
+{
+  "session": {
+    "timestamp": "20260323_230542",
+    "node_name": "hybrid_sim",
+    "total_entries": 99
+  },
+  "entries": [
+    {
+      "timestamp": "2026-03-23T23:05:42.902053",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 0,
+        "state": {
+          "px": 0.0,
+          "py": 0.0,
+          "theta": 0.7853981633974483
+        },
+        "reference": {
+          "px": 0.0,
+          "py": 0.0,
+          "theta": 0.7853981633974483
+        },
+        "error": {
+          "px": 0.0,
+          "py": 0.0,
+          "theta": 0.0
+        },
+        "error_norm": 0.0
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.902169",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 0,
+        "control": {
+          "v": 1.4142135623730951,
+          "omega": -0.0037503125209392696
+        },
+        "controller": "LQR",
+        "solve_time_ms": 9.385000000293076,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.908062",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 1,
+        "state": {
+          "px": 0.020000000000000004,
+          "py": 0.020000000000000004,
+          "theta": 0.7853231571470295
+        },
+        "reference": {
+          "px": 0.01999966666833333,
+          "py": 0.01999866669333308,
+          "theta": 0.7853231571470295
+        },
+        "error": {
+          "px": 3.333316666749575e-07,
+          "py": 1.3333066669236893e-06,
+          "theta": 0.0
+        },
+        "error_norm": 1.3743422674397607e-06
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.908131",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 1,
+        "control": {
+          "v": 1.4140240216160753,
+          "omega": -0.01126247139232554
+        },
+        "controller": "LQR",
+        "solve_time_ms": 5.556199999773526,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.910891",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 2,
+        "state": {
+          "px": 0.039998819356608054,
+          "py": 0.03999581950870429,
+          "theta": 0.785097907719183
+        },
+        "reference": {
+          "px": 0.03999733338666616,
+          "py": 0.03998933418663416,
+          "theta": 0.7850980633706443
+        },
+        "error": {
+          "px": 1.4859699418931505e-06,
+          "py": 6.48532207012803e-06,
+          "theta": -1.5565146127549667e-07
+        },
+        "error_norm": 6.655203708294499e-06
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.910915",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 2,
+        "control": {
+          "v": 1.413445516473017,
+          "omega": -0.01880770207582083
+        },
+        "controller": "LQR",
+        "solve_time_ms": 2.566800000749936,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.916228",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 3,
+        "state": {
+          "px": 0.059993958498434016,
+          "py": 0.059978954946219826,
+          "theta": 0.7847217536776666
+        },
+        "reference": {
+          "px": 0.05999100040499132,
+          "py": 0.0599640064794446,
+          "theta": 0.7847226568420766
+        },
+        "error": {
+          "px": 2.9580934426953753e-06,
+          "py": 1.4948466775223379e-05,
+          "theta": -9.031644100376823e-07
+        },
+        "error_norm": 1.5265080468089034e-05
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.916285",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 3,
+        "control": {
+          "v": 1.412486120855441,
+          "omega": -0.026389183977287598
+        },
+        "controller": "LQR",
+        "solve_time_ms": 5.20070000038686,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.920674",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 4,
+        "state": {
+          "px": 0.07998303588536754,
+          "py": 0.07994100899541234,
+          "theta": 0.7841939699981209
+        },
+        "reference": {
+          "px": 0.07997866837326832,
+          "py": 0.07991469396917268,
+          "theta": 0.7841965616812204
+        },
+        "error": {
+          "px": 4.367512099215376e-06,
+          "py": 2.6315026239662198e-05,
+          "theta": -2.591683099573139e-06
+        },
+        "error_norm": 2.6800608000930046e-05
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:42.920732",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 4,
+        "control": {
+          "v": 1.411152478112993,
+          "omega": -0.03401088277208051
+        },
+        "controller": "LQR",
+        "solve_time_ms": 4.189999999653082,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.080166",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 5,
+        "state": {
+          "px": 0.09996376287949969,
+          "py": 0.09987367252489919,
+          "theta": 0.7835137523426793
+        },
+        "reference": {
+          "px": 0.09995833854135666,
+          "py": 0.09983341664682815,
+          "theta": 0.7835192505983565
+        },
+        "error": {
+          "px": 5.4243381430313375e-06,
+          "py": 4.025587807103548e-05,
+          "theta": -5.498255677194308e-06
+        },
+        "error_norm": 4.099012050545618e-05
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.080205",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 5,
+        "control": {
+          "v": 0.22380975617905016,
+          "omega": -0.009485754319246809
+        },
+        "controller": "MPC",
+        "solve_time_ms": 159.07400000014604,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.296799",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 6,
+        "state": {
+          "px": 0.10313486962178295,
+          "py": 0.10303285039475965,
+          "theta": 0.7833240372562943
+        },
+        "reference": {
+          "px": 0.11992801295888919,
+          "py": 0.11971220728891936,
+          "theta": 0.7826900438339384
+        },
+        "error": {
+          "px": -0.016793143337106242,
+          "py": -0.01667935689415971,
+          "theta": 0.0006339934223559274
+        },
+        "error_norm": 0.023677258228159345
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.296834",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 6,
+        "control": {
+          "v": 0.2469774493788875,
+          "omega": -0.010903029440546552
+        },
+        "controller": "MPC",
+        "solve_time_ms": 209.10150000054273,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.448372",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 7,
+        "state": {
+          "px": 0.1066348951728337,
+          "py": 0.10651838698797915,
+          "theta": 0.7831059766674834
+        },
+        "reference": {
+          "px": 0.13988569467506554,
+          "py": 0.1395431146442365,
+          "theta": 0.7817081077917023
+        },
+        "error": {
+          "px": -0.03325079950223184,
+          "py": -0.033024727656257344,
+          "theta": 0.001397868875781083
+        },
+        "error_norm": 0.046884990580157604
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.448409",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 7,
+        "control": {
+          "v": 0.26958418706360765,
+          "omega": -0.012409882300403963
+        },
+        "controller": "MPC",
+        "solve_time_ms": 144.29239999935817,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.650923",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 8,
+        "state": {
+          "px": 0.11045612023804595,
+          "py": 0.11032213416239704,
+          "theta": 0.7828577790214754
+        },
+        "reference": {
+          "px": 0.1598293879383454,
+          "py": 0.15931820661424598,
+          "theta": 0.7805724533623122
+        },
+        "error": {
+          "px": -0.04937326770029944,
+          "py": -0.048996072451848935,
+          "theta": 0.002285325659163173
+        },
+        "error_norm": 0.06959567078835215
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.650960",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 8,
+        "control": {
+          "v": 0.2916344449091272,
+          "omega": -0.014005124374750322
+        },
+        "controller": "MPC",
+        "solve_time_ms": 196.34320000022853,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.897164",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 9,
+        "state": {
+          "px": 0.1145909181842678,
+          "py": 0.11443597734449593,
+          "theta": 0.7825776765339804
+        },
+        "reference": {
+          "px": 0.17975709839602208,
+          "py": 0.17902957342582415,
+          "theta": 0.7792819339341677
+        },
+        "error": {
+          "px": -0.06516618021175428,
+          "py": -0.06459359608132823,
+          "theta": 0.00329574259981269
+        },
+        "error_norm": 0.09181408180335322
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:43.897208",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 9,
+        "control": {
+          "v": 0.31313265928033124,
+          "omega": -0.0156879360561466
+        },
+        "controller": "MPC",
+        "solve_time_ms": 239.43959999996878,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.124167",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 10,
+        "state": {
+          "px": 0.11903175523333753,
+          "py": 0.11885183413868643,
+          "theta": 0.7822639178128574
+        },
+        "reference": {
+          "px": 0.1996668332936563,
+          "py": 0.19866933079506124,
+          "theta": 0.7778352430874435
+        },
+        "error": {
+          "px": -0.08063507806031878,
+          "py": -0.07981749665637482,
+          "theta": 0.0044286747254139724
+        },
+        "error_norm": 0.11354497675418154
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.124202",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 10,
+        "control": {
+          "v": 0.33408323195812745,
+          "omega": -0.017457752982356745
+        },
+        "controller": "MPC",
+        "solve_time_ms": 217.50499999961903,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.275714",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 11,
+        "state": {
+          "px": 0.12377119059336704,
+          "py": 0.12356165311804616,
+          "theta": 0.7819147627532103
+        },
+        "reference": {
+          "px": 0.21955660167434962,
+          "py": 0.21822962308086932,
+          "theta": 0.7762309119668949
+        },
+        "error": {
+          "px": -0.09578541108098258,
+          "py": -0.09466796996282316,
+          "theta": 0.005683850786315392
+        },
+        "error_norm": 0.13479308466162465
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.275747",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 11,
+        "control": {
+          "v": 0.35449053480844034,
+          "omega": -0.019314198987062436
+        },
+        "controller": "MPC",
+        "solve_time_ms": 148.76379999986966,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.458180",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 12,
+        "state": {
+          "px": 0.1288018765325615,
+          "py": 0.12855741278887708,
+          "theta": 0.781528478773469
+        },
+        "reference": {
+          "px": 0.23942441457783872,
+          "py": 0.23770262642713458,
+          "theta": 0.7744673063284713
+        },
+        "error": {
+          "px": -0.11062253804527722,
+          "py": -0.1091452136382575,
+          "theta": 0.00706117244499771
+        },
+        "error_norm": 0.1555631181868558
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.458213",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 12,
+        "control": {
+          "v": 0.37435891439034213,
+          "omega": -0.02125704498801917
+        },
+        "controller": "MPC",
+        "solve_time_ms": 163.6129999997138,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.613208",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 13,
+        "state": {
+          "px": 0.13411655839958464,
+          "py": 0.13383112072217618,
+          "theta": 0.7811033378737086
+        },
+        "reference": {
+          "px": 0.2592682852393897,
+          "py": 0.2570805518921551,
+          "theta": 0.7725426232543283
+        },
+        "error": {
+          "px": -0.12515172683980508,
+          "py": -0.12324943116997894,
+          "theta": 0.008560714619380239
+        },
+        "error_norm": 0.17585978178510012
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.613244",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 13,
+        "control": {
+          "v": 0.3936926965008614,
+          "omega": -0.023286183015811313
+        },
+        "controller": "MPC",
+        "solve_time_ms": 148.25440000004164,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.752813",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 14,
+        "state": {
+          "px": 0.13970807459395437,
+          "py": 0.13937481284560338,
+          "theta": 0.7806376142133923
+        },
+        "reference": {
+          "px": 0.279086229288473,
+          "py": 0.27635564856411376,
+          "theta": 0.7704548875304338
+        },
+        "error": {
+          "px": -0.1393781546945186,
+          "py": -0.13698083571851039,
+          "theta": 0.010182726682958498
+        },
+        "error_norm": 0.195687780106195
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.752852",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 14,
+        "control": {
+          "v": 0.4124961906543482,
+          "omega": -0.02540160945106651
+        },
+        "controller": "MPC",
+        "solve_time_ms": 120.38750000010623,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.895875",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 15,
+        "state": {
+          "px": 0.14556935648958466,
+          "py": 0.1451805528898782,
+          "theta": 0.780129582024371
+        },
+        "reference": {
+          "px": 0.29887626494719843,
+          "py": 0.29552020666133955,
+          "theta": 0.7682019476806334
+        },
+        "error": {
+          "px": -0.15330690845761377,
+          "py": -0.15033965377146136,
+          "theta": 0.011927634343737559
+        },
+        "error_norm": 0.2150518266325398
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:44.895915",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 15,
+        "control": {
+          "v": 0.4307736944946026,
+          "omega": -0.02760341406542044
+        },
+        "controller": "MPC",
+        "solve_time_ms": 139.23329999943235,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.038332",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 16,
+        "state": {
+          "px": 0.15169342831431817,
+          "py": 0.15124043198379722,
+          "theta": 0.7795775137430626
+        },
+        "reference": {
+          "px": 0.31863641322849195,
+          "py": 0.31456656061611776,
+          "theta": 0.765781471650788
+        },
+        "error": {
+          "px": -0.16694298491417378,
+          "py": -0.16332612863232054,
+          "theta": 0.013796042092274585
+        },
+        "error_norm": 0.23395665257369191
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.038370",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 16,
+        "control": {
+          "v": 0.44852949813829607,
+          "omega": -0.02989177283726363
+        },
+        "controller": "MPC",
+        "solve_time_ms": 138.61269999961223,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.193852",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 17,
+        "state": {
+          "px": 0.1580734069880892,
+          "py": 0.157546568392273,
+          "theta": 0.7789796782863173
+        },
+        "reference": {
+          "px": 0.33836469813399206,
+          "py": 0.33348709214081446,
+          "theta": 0.7631909421364422
+        },
+        "error": {
+          "px": -0.18029129114590287,
+          "py": -0.17594052374854147,
+          "theta": 0.015788736149875082
+        },
+        "error_norm": 0.25240701604586624
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.193885",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 17,
+        "control": {
+          "v": 0.46576788844852024,
+          "omega": -0.032266943292844186
+        },
+        "controller": "MPC",
+        "solve_time_ms": 128.48659999963274,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.324591",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 18,
+        "state": {
+          "px": 0.16470250192219746,
+          "py": 0.16409110739196558,
+          "theta": 0.7783343394204604
+        },
+        "reference": {
+          "px": 0.35805914685164836,
+          "py": 0.35227423327509,
+          "theta": 0.760427651547437
+        },
+        "error": {
+          "px": -0.1933566449294509,
+          "py": -0.1881831258831244,
+          "theta": 0.017906687873023408
+        },
+        "error_norm": 0.27040771156921445
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.324622",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 18,
+        "control": {
+          "v": 0.48249315323759673,
+          "omega": -0.03472926158086631
+        },
+        "controller": "MPC",
+        "solve_time_ms": 106.12299999957031,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.483802",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 19,
+        "state": {
+          "px": 0.1715740147820468,
+          "py": 0.17086622127922893,
+          "theta": 0.777639754188843
+        },
+        "reference": {
+          "px": 0.37771778995300115,
+          "py": 0.3709204694129827,
+          "theta": 0.7574886966029721
+        },
+        "error": {
+          "px": -0.20614377517095434,
+          "py": -0.20005424813375375,
+          "theta": 0.02015105758587088
+        },
+        "error_norm": 0.28796357991927307
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.483837",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 19,
+        "control": {
+          "v": 0.4987095853985724,
+          "omega": -0.03727914076569583
+        },
+        "controller": "MPC",
+        "solve_time_ms": 157.88590000011027,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.638947",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 20,
+        "state": {
+          "px": 0.17868133921560192,
+          "py": 0.17786410950522663,
+          "theta": 0.7768941713735291
+        },
+        "reference": {
+          "px": 0.39733866159012243,
+          "py": 0.38941834230865047,
+          "theta": 0.7543709725508718
+        },
+        "error": {
+          "px": -0.2186573223745205,
+          "py": -0.21155423280342384,
+          "theta": 0.022523198822657298
+        },
+        "error_norm": 0.3050795183722519
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.638986",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 20,
+        "control": {
+          "v": 0.4999004175259121,
+          "omega": -0.03991706999665379
+        },
+        "controller": "MPC",
+        "solve_time_ms": 119.90929999956279,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.813021",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 21,
+        "state": {
+          "px": 0.18581086269215757,
+          "py": 0.18487339377498443,
+          "theta": 0.776095829973596
+        },
+        "reference": {
+          "px": 0.4169197996921991,
+          "py": 0.40776045305957015,
+          "theta": 0.7510711670052485
+        },
+        "error": {
+          "px": -0.23110893700004154,
+          "py": -0.22288705928458571,
+          "theta": 0.0250246629683476
+        },
+        "error_norm": 0.32205002051622195
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.813053",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 21,
+        "control": {
+          "v": 0.49988647859435226,
+          "omega": -0.04261937617769607
+        },
+        "controller": "MPC",
+        "solve_time_ms": 164.1827999992529,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.936096",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 22,
+        "state": {
+          "px": 0.1929457807464987,
+          "py": 0.19187678873388983,
+          "theta": 0.7752434424500422
+        },
+        "reference": {
+          "px": 0.43645924616173865,
+          "py": 0.4259394650659996,
+          "theta": 0.7475857533974175
+        },
+        "error": {
+          "px": -0.24351346541523994,
+          "py": -0.23406267633210978,
+          "theta": 0.027657689052624668
+        },
+        "error_norm": 0.3388939244867351
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:45.936130",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 22,
+        "control": {
+          "v": 0.49987127962672706,
+          "omega": -0.045382974187299086
+        },
+        "controller": "MPC",
+        "solve_time_ms": 117.95299999994313,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.087242",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 23,
+        "state": {
+          "px": 0.20008644869715667,
+          "py": 0.19887388668209027,
+          "theta": 0.7743357829662962
+        },
+        "reference": {
+          "px": 0.4559550470703768,
+          "py": 0.44394810696551984,
+          "theta": 0.7439109840358401
+        },
+        "error": {
+          "px": -0.2558685983732202,
+          "py": -0.24507422028342957,
+          "theta": 0.03042479893045613
+        },
+        "error_norm": 0.3556062168620873
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.087272",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 23,
+        "control": {
+          "v": 0.4998547634390758,
+          "omega": -0.048206819880744156
+        },
+        "controller": "MPC",
+        "solve_time_ms": 122.27689999963332,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.202409",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 24,
+        "state": {
+          "px": 0.20723322854414225,
+          "py": 0.20586426947789013,
+          "theta": 0.7733716465686814
+        },
+        "reference": {
+          "px": 0.47540525285426916,
+          "py": 0.46177917554148284,
+          "theta": 0.7400428827720981
+        },
+        "error": {
+          "px": -0.2681720243101269,
+          "py": -0.2559149060635927,
+          "theta": 0.03332876379658334
+        },
+        "error_norm": 0.3721820525822507
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.202443",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 24,
+        "control": {
+          "v": 0.4998368719417494,
+          "omega": -0.05109002709364896
+        },
+        "controller": "MPC",
+        "solve_time_ms": 95.15449999980774,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.340829",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 25,
+        "state": {
+          "px": 0.21438648870228647,
+          "py": 0.21284750859243518,
+          "theta": 0.7723498460268085
+        },
+        "reference": {
+          "px": 0.4948079185090459,
+          "py": 0.479425538604203,
+          "theta": 0.7359772372714972
+        },
+        "error": {
+          "px": -0.28042142980675944,
+          "py": -0.26657803001176783,
+          "theta": 0.03637260875531123
+        },
+        "error_norm": 0.388616766297453
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.340863",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 25,
+        "control": {
+          "v": 0.49981754599126754,
+          "omega": -0.054031858202479466
+        },
+        "controller": "MPC",
+        "solve_time_ms": 136.44920000024285,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.506976",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 26,
+        "state": {
+          "px": 0.22154660374934215,
+          "py": 0.21982316513682007,
+          "theta": 0.7712692088627588
+        },
+        "reference": {
+          "px": 0.5141611037843102,
+          "py": 0.49688013784373675,
+          "theta": 0.7317095908888981
+        },
+        "error": {
+          "px": -0.2926145000349681,
+          "py": -0.27705697270691665,
+          "theta": 0.03955961797386076
+        },
+        "error_norm": 0.4049058842872913
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.507019",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 26,
+        "control": {
+          "v": 0.4997967252371914,
+          "omega": -0.057031715786236115
+        },
+        "controller": "MPC",
+        "solve_time_ms": 152.3633000006157,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.630512",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 27,
+        "state": {
+          "px": 0.2287139541872594,
+          "py": 0.226790789862881,
+          "theta": 0.7701285745470341
+        },
+        "reference": {
+          "px": 0.5334628733776623,
+          "py": 0.5141359916531132,
+          "theta": 0.7272352341528829
+        },
+        "error": {
+          "px": -0.3047489191904029,
+          "py": -0.28734520179023215,
+          "theta": 0.04289334039415116
+        },
+        "error_norm": 0.42104513699810914
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.630542",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 27,
+        "control": {
+          "v": 0.4997743479642528,
+          "omega": -0.06008913522256365
+        },
+        "controller": "MPC",
+        "solve_time_ms": 118.35969999992813,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.756892",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 28,
+        "state": {
+          "px": 0.23588892621518717,
+          "py": 0.23374992313877763,
+          "theta": 0.7689267918425828
+        },
+        "reference": {
+          "px": 0.5527112971282275,
+          "py": 0.5311861979208834,
+          "theta": 0.7225491958644261
+        },
+        "error": {
+          "px": -0.31682237091304033,
+          "py": -0.29743627478210577,
+          "theta": 0.046377595978156716
+        },
+        "error_norm": 0.4370304722509971
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.756923",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 28,
+        "control": {
+          "v": 0.499750350929902,
+          "omega": -0.06320377808335431
+        },
+        "controller": "MPC",
+        "solve_time_ms": 122.99979999988864,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.892928",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 29,
+        "state": {
+          "px": 0.2430719115128668,
+          "py": 0.24070009490033448,
+          "theta": 0.7676627162809158
+        },
+        "reference": {
+          "px": 0.5719044502096711,
+          "py": 0.5480239367918736,
+          "theta": 0.7176462338199793
+        },
+        "error": {
+          "px": -0.3288325386968043,
+          "py": -0.30732384189153905,
+          "theta": 0.050016482460936484
+        },
+        "error_norm": 0.4528580691767854
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:46.892957",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 29,
+        "control": {
+          "v": 0.4997246691973637,
+          "omega": -0.06637542621958925
+        },
+        "controller": "MPC",
+        "solve_time_ms": 131.86099999984435,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.052228",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 30,
+        "state": {
+          "px": 0.2502633070331758,
+          "py": 0.24764082457899547,
+          "theta": 0.766335207756524
+        },
+        "reference": {
+          "px": 0.5910404133226791,
+          "py": 0.5646424733950353,
+          "theta": 0.712520825173375
+        },
+        "error": {
+          "px": -0.3407771062895033,
+          "py": -0.31700164881603976,
+          "theta": 0.05381438258314897
+        },
+        "error_norm": 0.4685243529379671
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.052260",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 30,
+        "control": {
+          "v": 0.49969723596423304,
+          "omega": -0.0696039764445231
+        },
+        "controller": "MPC",
+        "solve_time_ms": 147.5547000000006,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.632568",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 31,
+        "state": {
+          "px": 0.2574635148026557,
+          "py": 0.25457162100714414,
+          "theta": 0.7649431282276336
+        },
+        "reference": {
+          "px": 0.610117272886887,
+          "py": 0.5810351605373051,
+          "theta": 0.7071671564563529
+        },
+        "error": {
+          "px": -0.3526537580842313,
+          "py": -0.32646353953016094,
+          "theta": 0.05777597177128069
+        },
+        "error_norm": 0.48402601030069475
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.632596",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 31,
+        "control": {
+          "v": 0.49966798238658794,
+          "omega": -0.07288943573956397
+        },
+        "controller": "MPC",
+        "solve_time_ms": 570.853199999874,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.778942",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 32,
+        "state": {
+          "px": 0.2646729417289194,
+          "py": 0.2614919823014537,
+          "theta": 0.7634853395128423
+        },
+        "reference": {
+          "px": 0.6291331212322355,
+          "py": 0.597195441362392,
+          "theta": 0.7015791132839158
+        },
+        "error": {
+          "px": -0.3644601795033161,
+          "py": -0.3357034590609383,
+          "theta": 0.0619062262289265
+        },
+        "error_norm": 0.49936000612281267
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.778975",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 32,
+        "control": {
+          "v": 0.4996368373985508,
+          "omega": -0.07623191691930442
+        },
+        "controller": "MPC",
+        "solve_time_ms": 136.46179999977903,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.912771",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 33,
+        "state": {
+          "px": 0.27189199941388087,
+          "py": 0.26840139572485294,
+          "theta": 0.7619607011744561
+        },
+        "reference": {
+          "px": 0.6480860567897367,
+          "py": 0.6131168519734339,
+          "theta": 0.6957502697783335
+        },
+        "error": {
+          "px": -0.3761940573758559,
+          "py": -0.34471545624858096,
+          "theta": 0.0662104313961226
+        },
+        "error_norm": 0.5145236008262758
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:47.912803",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 33,
+        "control": {
+          "v": 0.49960372752719273,
+          "omega": -0.07963163470182266
+        },
+        "controller": "MPC",
+        "solve_time_ms": 121.25520000063261,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.054424",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 34,
+        "state": {
+          "px": 0.2791211039717908,
+          "py": 0.27529933752762514,
+          "theta": 0.7603680684804197
+        },
+        "reference": {
+          "px": 0.6669741842816288,
+          "py": 0.6287930240184685,
+          "theta": 0.6896738777545541
+        },
+        "error": {
+          "px": -0.387853080309838,
+          "py": -0.35349368649084334,
+          "theta": 0.07069419072586558
+        },
+        "error_norm": 0.5295143689241126
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.054461",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 34,
+        "control": {
+          "v": 0.4995685767026424,
+          "omega": -0.0830889021381318
+        },
+        "controller": "MPC",
+        "solve_time_ms": 135.91080000060174,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.232886",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 35,
+        "state": {
+          "px": 0.28636067585108926,
+          "py": 0.2821852727680956,
+          "theta": 0.758706290437657
+        },
+        "reference": {
+          "px": 0.6857956149109028,
+          "py": 0.6442176872376911,
+          "theta": 0.6833428557202919
+        },
+        "error": {
+          "px": -0.39943493905981353,
+          "py": -0.36203241446959555,
+          "theta": 0.07536343471736517
+        },
+        "error_norm": 0.5443302186731879
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.232922",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 35,
+        "control": {
+          "v": 0.4995313060632319,
+          "omega": -0.08660412736089707
+        },
+        "controller": "MPC",
+        "solve_time_ms": 160.23110000060115,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.381346",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 36,
+        "state": {
+          "px": 0.2936111396591092,
+          "py": 0.2890586551133088,
+          "theta": 0.7569742078904391
+        },
+        "reference": {
+          "px": 0.7045484665501799,
+          "py": 0.6593846719714731,
+          "theta": 0.6767497777563413
+        },
+        "error": {
+          "px": -0.4109373268910707,
+          "py": -0.3703260168581643,
+          "theta": 0.08022443013409786
+        },
+        "error_norm": 0.5589694129241357
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.381374",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 36,
+        "control": {
+          "v": 0.4994918337554941,
+          "omega": -0.090177810617599
+        },
+        "controller": "MPC",
+        "solve_time_ms": 139.41030000023602,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.537626",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 37,
+        "state": {
+          "px": 0.300872923988679,
+          "py": 0.29591892662004854,
+          "theta": 0.7551706516780872
+        },
+        "reference": {
+          "px": 0.723230863929924,
+          "py": 0.6742879116281452,
+          "theta": 0.6698868623569647
+        },
+        "error": {
+          "px": -0.422357939941245,
+          "py": -0.3783689850080966,
+          "theta": 0.08528378932112246
+        },
+        "error_norm": 0.5734305912387646
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.537660",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 37,
+        "control": {
+          "v": 0.4994500747288051,
+          "omega": -0.09381054155739399
+        },
+        "controller": "MPC",
+        "solve_time_ms": 151.41450000010082,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.998292",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 38,
+        "state": {
+          "px": 0.30814646124568146,
+          "py": 0.30276551749650965,
+          "theta": 0.7532944408469393
+        },
+        "reference": {
+          "px": 0.7418409388259654,
+          "py": 0.6889214451105513,
+          "theta": 0.6627459613267954
+        },
+        "error": {
+          "px": -0.4336944775802839,
+          "py": -0.38615592761404166,
+          "theta": 0.09054847952014389
+        },
+        "error_norm": 0.5877127933425529
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:48.998324",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 38,
+        "control": {
+          "v": 0.4994059405244566,
+          "omega": -0.09750299674425111
+        },
+        "controller": "MPC",
+        "solve_time_ms": 455.6701999999859,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.345000",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 39,
+        "state": {
+          "px": 0.3154321874766287,
+          "py": 0.3095978458448938,
+          "theta": 0.7513443809120542
+        },
+        "reference": {
+          "px": 0.7603768302463229,
+          "py": 0.7032794192004101,
+          "theta": 0.6553185488498808
+        },
+        "error": {
+          "px": -0.44494464276969414,
+          "py": -0.39368157335551635,
+          "theta": 0.09602583206217341
+        },
+        "error_norm": 0.6018154839752449
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.345029",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 39,
+        "control": {
+          "v": 0.499359339058935,
+          "omega": -0.10125593737160377
+        },
+        "controller": "MPC",
+        "solve_time_ms": 343.08429999964574,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.483424",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 40,
+        "state": {
+          "px": 0.3227305421953109,
+          "py": 0.31641531738516737,
+          "theta": 0.7493192621646222
+        },
+        "reference": {
+          "px": 0.778836684617301,
+          "py": 0.7173560908995228,
+          "theta": 0.6475957108685986
+        },
+        "error": {
+          "px": -0.45610614242199016,
+          "py": -0.4009407735143554,
+          "theta": 0.10172355129602362
+        },
+        "error_norm": 0.6157385791954514
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.483454",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 40,
+        "control": {
+          "v": 0.4993101744011821,
+          "omega": -0.10507020715591775
+        },
+        "controller": "MPC",
+        "solve_time_ms": 126.48260000059963,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.624859",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 41,
+        "state": {
+          "px": 0.33004196820757004,
+          "py": 0.3232173251601905,
+          "theta": 0.7472178580215039
+        },
+        "reference": {
+          "px": 0.7972186559688459,
+          "py": 0.731145829726896,
+          "theta": 0.6395681349355568
+        },
+        "error": {
+          "px": -0.46717668776127586,
+          "py": -0.4079285045667055,
+          "theta": 0.10764972308594711
+        },
+        "error_norm": 0.6294824741850296
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.624893",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 41,
+        "control": {
+          "v": 0.4992583465436147,
+          "omega": -0.10894673038828029
+        },
+        "controller": "MPC",
+        "solve_time_ms": 133.8329000000158,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.737343",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 42,
+        "state": {
+          "px": 0.3373669114332392,
+          "py": 0.33000324922240265,
+          "theta": 0.7450389234137382
+        },
+        "reference": {
+          "px": 0.8155209061191403,
+          "py": 0.7446431199708592,
+          "theta": 0.6312261007306176
+        },
+        "error": {
+          "px": -0.4781539946859011,
+          "py": -0.41463987074845654,
+          "theta": 0.11381282268312065
+        },
+        "error_norm": 0.6430480725851535
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.737370",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 42,
+        "control": {
+          "v": 0.4992982433124021,
+          "omega": -0.10597515959606385
+        },
+        "controller": "MPC",
+        "solve_time_ms": 106.33560000042053,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.890285",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 43,
+        "state": {
+          "px": 0.34470720987506276,
+          "py": 0.3367737376165219,
+          "theta": 0.742919420221817
+        },
+        "reference": {
+          "px": 0.8337416048584215,
+          "py": 0.757842562895277,
+          "theta": 0.6225594714682599
+        },
+        "error": {
+          "px": -0.48903439498335877,
+          "py": -0.42106882527875505,
+          "theta": 0.12035994875355716
+        },
+        "error_norm": 0.6564602900117641
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:49.890321",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 43,
+        "control": {
+          "v": 0.499335768781981,
+          "omega": -0.10310215034379433
+        },
+        "controller": "MPC",
+        "solve_time_ms": 151.30349999981263,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:50.587330",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 44,
+        "state": {
+          "px": 0.35206239463835093,
+          "py": 0.3435291607040813,
+          "theta": 0.7408573772149412
+        },
+        "reference": {
+          "px": 0.8518789301319992,
+          "py": 0.7707388788989693,
+          "theta": 0.6135576864580234
+        },
+        "error": {
+          "px": -0.4998165354936483,
+          "py": -0.427209718194888,
+          "theta": 0.12729969075691772
+        },
+        "error_norm": 0.6697237667425548
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:50.587357",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 44,
+        "control": {
+          "v": 0.4993710690204026,
+          "omega": -0.10032450350613309
+        },
+        "controller": "MPC",
+        "solve_time_ms": 685.17890000021,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:50.748909",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 45,
+        "state": {
+          "px": 0.35943201468148506,
+          "py": 0.35026987923029695,
+          "theta": 0.7388508871448185
+        },
+        "reference": {
+          "px": 0.8699310682224605,
+          "py": 0.7833269096274834,
+          "theta": 0.6042097551231719
+        },
+        "error": {
+          "px": -0.5104990535409755,
+          "py": -0.43305703039718646,
+          "theta": 0.13464113202164663
+        },
+        "error_norm": 0.6828439863356284
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:50.748937",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 45,
+        "control": {
+          "v": 0.49940428077128407,
+          "omega": -0.09763913642503108
+        },
+        "controller": "MPC",
+        "solve_time_ms": 158.64739999960875,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.474650",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 46,
+        "state": {
+          "px": 0.36681563609630646,
+          "py": 0.356996244449616,
+          "theta": 0.7368981044163179
+        },
+        "reference": {
+          "px": 0.8878962139310396,
+          "py": 0.795601620036366,
+          "theta": 0.5945042528303504
+        },
+        "error": {
+          "px": -0.5210805778347332,
+          "py": -0.43860537558675006,
+          "theta": 0.1423938515859675
+        },
+        "error_norm": 0.6958273155457897
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.474692",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 46,
+        "control": {
+          "v": 0.49943553206005614,
+          "omega": -0.09504307907030252
+        },
+        "controller": "MPC",
+        "solve_time_ms": 722.3678000000291,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.619051",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 47,
+        "state": {
+          "px": 0.37421284142135186,
+          "py": 0.3637085982582858,
+          "theta": 0.7349972428349119
+        },
+        "reference": {
+          "px": 0.9057725707581367,
+          "py": 0.8075581004051143,
+          "theta": 0.5844293189362826
+        },
+        "error": {
+          "px": -0.5315597293367849,
+          "py": -0.44384950214682856,
+          "theta": 0.15056792389862927
+        },
+        "error_norm": 0.708681046815651
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.619087",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 47,
+        "control": {
+          "v": 0.4994649427598281,
+          "omega": -0.09253347036944137
+        },
+        "controller": "MPC",
+        "solve_time_ms": 112.80309999983729,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.716202",
+      "level": "DEBUG",
+      "process": "state",
+      "event_type": "state_update",
+      "data": {
+        "timestep": 48,
+        "state": {
+          "px": 0.3816232289864446,
+          "py": 0.37040727333277257,
+          "theta": 0.733146573427523
+        },
+        "reference": {
+          "px": 0.9235583510829657,
+          "py": 0.8191915683009982,
+          "theta": 0.5739726575167142
+        },
+        "error": {
+          "px": -0.5419351220965212,
+          "py": -0.4487842949682256,
+          "theta": 0.15917391591080876
+        },
+        "error_norm": 0.7214134428178337
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.716242",
+      "level": "DEBUG",
+      "process": "control",
+      "event_type": "control_action",
+      "data": {
+        "timestep": 48,
+        "control": {
+          "v": 0.49949262511958165,
+          "omega": -0.09010755470236442
+        },
+        "controller": "MPC",
+        "solve_time_ms": 91.95039999940491,
+        "iterations": null
+      }
+    },
+    {
+      "timestamp": "2026-03-23T23:05:51.718529",
+      "level": "INFO",
+      "process": "simulation",
+      "event_type": "simulation_event",
+      "data": {
+        "event": "Simulation completed",
+        "details": {
+          "total_entries": 98,
+          "state_updates": 49,
+          "control_actions": 49,
+          "errors": 0,
+          "warnings": 0,
+          "session_timestamp": "20260323_230542",
+          "max_error_norm": 0.7214134428178337,
+          "mean_error_norm": 0.3561427038840878,
+          "final_error_norm": 0.7214134428178337
+        }
+      }
+    }
+  ]
+}

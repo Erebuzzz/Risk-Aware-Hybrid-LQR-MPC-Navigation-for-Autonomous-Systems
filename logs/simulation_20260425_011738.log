@@ -1,0 +1,18 @@
+[2026-04-25 01:17:38.468] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260425_011738.log
+[2026-04-25 01:17:39.235] [INFO] [mpc_sim] k=20 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:39.393] [INFO] [mpc_sim] k=30 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:39.473] [INFO] [mpc_sim] k=35 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:39.561] [INFO] [mpc_sim] k=40 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:40.370] [INFO] [mpc_sim] k=75 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:49.173] [INFO] [mpc_sim] k=565 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:49.241] [INFO] [mpc_sim] k=570 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:49.434] [INFO] [mpc_sim] k=580 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:49.509] [INFO] [mpc_sim] k=585 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:49.590] [INFO] [mpc_sim] k=590 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:50.141] [INFO] [mpc_sim] k=610 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:50.256] [INFO] [mpc_sim] k=615 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:17:56.084] [INFO] [mpc_sim] Simulation completed | total_entries=2010 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260425_011738 | max_error_norm=0.9781298871888106 | mean_error_norm=0.2655448852393425 | final_error_norm=0.17829997092427574
+[2026-04-25 01:17:56.126] [INFO] [mpc_sim] State history exported to logs\states_20260425_011738.csv
+[2026-04-25 01:17:56.142] [INFO] [mpc_sim] Control history exported to logs\controls_20260425_011738.csv
+[2026-04-25 01:17:56.317] [INFO] [mpc_sim] Logs exported to logs\simulation_20260425_011738.json
+[2026-04-25 01:17:56.318] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2010, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260425_011738', 'max_error_norm': 0.9781298871888106, 'mean_error_norm': 0.2655448852393425, 'final_error_norm': 0.17829997092427574}

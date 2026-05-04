@@ -1,0 +1,6 @@
+[2026-03-23 23:01:20.530] [INFO] [hybrid_sim] SimulationLogger initialized. Log file: logs\simulation_20260323_230120.log
+[2026-03-23 23:03:54.000] [INFO] [hybrid_sim] Simulation completed | total_entries=1998 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260323_230120 | max_error_norm=2.61987950159756 | mean_error_norm=1.8302466375051363 | final_error_norm=2.0052562879191576
+[2026-03-23 23:03:54.014] [INFO] [hybrid_sim] State history exported to logs\states_20260323_230120.csv
+[2026-03-23 23:03:54.020] [INFO] [hybrid_sim] Control history exported to logs\controls_20260323_230120.csv
+[2026-03-23 23:03:54.139] [INFO] [hybrid_sim] Logs exported to logs\simulation_20260323_230120.json
+[2026-03-23 23:03:54.140] [INFO] [hybrid_sim] Logging session finalized. Summary: {'total_entries': 1998, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260323_230120', 'max_error_norm': 2.61987950159756, 'mean_error_norm': 1.8302466375051363, 'final_error_norm': 2.0052562879191576}

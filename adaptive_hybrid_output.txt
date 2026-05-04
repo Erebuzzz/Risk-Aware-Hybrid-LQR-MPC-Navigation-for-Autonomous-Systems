@@ -1,0 +1,104 @@
+﻿.venv\Scripts\python.ex
+e : [2026-03-31 
+18:01:49.293] [INFO] 
+[adaptive_hybrid_sim] 
+SimulationLogger 
+initialized. Log file: 
+logs\simulation_2026033
+1_180149.log
+At line:1 char:1
++ .venv\Scripts\python.
+exe run_simulation.py 
+--mode adaptive_hybrid 
+--s ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : 
+NotSpecified: ([    
+2026-03-31 18:...0331  
+  _180149.log:String) 
+[    ], RemoteException
+    + 
+FullyQualifiedError    
+Id : NativeCommandErr  
+  or
+ 
+============================================================
+Adaptive Hybrid LQR + Adaptive-MPC Simulation
+============================================================
+Scenario: default | Added 3 obstacles
+
+Starting adaptive hybrid simulation (1000 steps)...
+Traceback (most recent 
+call last):
+  File "C:\Users\agoli\
+.antigravity\Risk-Aware
+-Hybrid-LQR-MPC-Navigat
+ion-for-Autonomous-Syst
+ems\run_simulation.py",
+ line 1203, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\agoli\
+.antigravity\Risk-Aware
+-Hybrid-LQR-MPC-Navigat
+ion-for-Autonomous-Syst
+ems\run_simulation.py",
+ line 1195, in main
+    run_adaptive_hybrid
+_simulation(duration=ar
+gs.duration, 
+dt=args.dt,
+    ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^
+                       
+            
+visualize=not 
+args.no_plot, 
+scenario=args.scenario,
+                       
+            ^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
+                       
+            actuator_pa
+rams=act_params)
+                       
+            ^^^^^^^^^^^
+^^^^^^^^^^^^^^^^
+  File "C:\Users\agoli\
+.antigravity\Risk-Aware
+-Hybrid-LQR-MPC-Navigat
+ion-for-Autonomous-Syst
+ems\run_simulation.py",
+ line 907, in run_adapt
+ive_hybrid_simulation
+    print(f"Initial 
+\u03b8\u0302 = {adaptiv
+e_mpc.param_estimates}"
+)
+    ~~~~~^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^
+  File "C:\Users\agoli\
+AppData\Local\Programs\
+Python\Python313\Lib\en
+codings\cp1252.py", 
+line 19, in encode
+    return codecs.charm
+ap_encode(input,self.er
+rors,encoding_table)[0]
+           ~~~~~~~~~~~~
+~~~~~~~~~^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 
+'charmap' codec can't 
+encode characters in 
+position 8-9: 
+character maps to 
+<undefined>

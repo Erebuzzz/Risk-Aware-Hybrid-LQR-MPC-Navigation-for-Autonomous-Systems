@@ -61,6 +61,24 @@ adaptive_mpc_controller_node:
     r_v: 0.1
     r_omega: 0.1
 
+# ── Async (Threaded) Adaptive MPC Controller ──────────────────────────────
+async_mpc_controller_node:
+  ros__parameters:
+    use_sim_time: true
+    control_rate: 20.0
+    trajectory_amplitude: 0.5
+    trajectory_frequency: 0.15
+    dt: 0.05
+    v_max: 0.22
+    omega_max: 2.84
+    horizon: 10
+    d_safe: 0.30
+    q_x: 30.0
+    q_y: 30.0
+    q_theta: 5.0
+    r_v: 0.1
+    r_omega: 0.1
+
 # ── Hybrid Controller ──────────────────────────────────────────────────────
 hybrid_controller:
   ros__parameters:

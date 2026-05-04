@@ -1,0 +1,17 @@
+[2026-04-25 01:20:19.268] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260425_012019.log
+[2026-04-25 01:20:19.715] [INFO] [mpc_sim] k=20 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:19.870] [INFO] [mpc_sim] k=30 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:19.952] [INFO] [mpc_sim] k=35 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:20.964] [INFO] [mpc_sim] k=85 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:22.060] [INFO] [mpc_sim] k=165 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:22.576] [INFO] [mpc_sim] k=185 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:27.540] [INFO] [mpc_sim] k=565 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:27.609] [INFO] [mpc_sim] k=570 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:27.818] [INFO] [mpc_sim] k=580 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:27.948] [INFO] [mpc_sim] k=585 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:28.503] [INFO] [mpc_sim] k=615 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 01:20:34.014] [INFO] [mpc_sim] Simulation completed | total_entries=2009 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260425_012019 | max_error_norm=0.8334532391654687 | mean_error_norm=0.17896455320666527 | final_error_norm=0.1311923466178085
+[2026-04-25 01:20:34.029] [INFO] [mpc_sim] State history exported to logs\states_20260425_012019.csv
+[2026-04-25 01:20:34.037] [INFO] [mpc_sim] Control history exported to logs\controls_20260425_012019.csv
+[2026-04-25 01:20:34.144] [INFO] [mpc_sim] Logs exported to logs\simulation_20260425_012019.json
+[2026-04-25 01:20:34.145] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2009, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260425_012019', 'max_error_norm': 0.8334532391654687, 'mean_error_norm': 0.17896455320666527, 'final_error_norm': 0.1311923466178085}

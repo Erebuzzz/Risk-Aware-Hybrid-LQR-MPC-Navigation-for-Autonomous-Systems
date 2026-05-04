@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Report: Hybrid Navigation</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax for Mathematical Formulas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        @media print {
+            body { font-size: 12pt; }
+            .no-print { display: none; }
+            .page-break { page-break-before: always; }
+        }
+        body { font-family: 'Inter', -apple-system, sans-serif; }
+        h1, h2, h3 { color: #1e3a8a; }
+        .math-block { overflow-x: auto; margin: 1.5rem 0; }
+        code { background-color: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; color: #b91c1c; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 p-8 max-w-5xl mx-auto bg-white shadow-lg my-8">
+
+    <div class="text-center border-b-2 border-blue-900 pb-6 mb-8">
+        <h1 class="text-4xl font-bold mb-2">Technical Report</h1>
+        <h2 class="text-2xl font-semibold text-gray-600">Asynchronous MPC Integration & PID Trajectory Tracking</h2>
+        <p class="text-gray-500 mt-2">Date: May 2026</p>
+    </div>
+
+    <!-- SECTION 1 -->
+    <section class="mb-12">
+        <h2 class="text-3xl font-bold mb-6 border-b pb-2">1. Asynchronous MPC vs. Synchronous MPC in ROS2</h2>
+        
+        <p class="mb-4">Model Predictive Control (MPC) is highly effective for optimal trajectory planning, but solving non-linear optimization problems (via Solvers like CasADi/IPOPT) is computationally expensive. The standard synchronous <code>mpc_controller.py</code> encounters significant limitations in real-time robotic systems, which the <code>async_mpc_controller_node.py</code> is designed to resolve.</p>
+
+        <h3 class="text-xl font-bold mt-6 mb-3">1.1 The Synchronous Bottleneck</h3>
+        <p class="mb-3">In a synchronous implementation, the ROS2 node executes the MPC solver inside the main timer callback. When the solver takes 50&ndash;150ms to converge:</p>
+        <ul class="list-disc pl-8 mb-4 space-y-2">
+            <li><strong>Executor Blocking:</strong> The single-threaded executor cannot process incoming <code>/odom</code> (Odometry) and laser scan callbacks.</li>
+            <li><strong>Stale State Estimation:</strong> By the time the solver outputs a velocity command, the robot has already moved. The computed velocities are based on old states, causing erratic oscillations.</li>
+            <li><strong>Infeasibility Loops:</strong> The delayed state feedback leads to diverging error states, causing the solver to repeatedly return an <code>AMPC_INFEASIBLE</code> status, paralyzing the robot.</li>
+        </ul>
+
+        <h3 class="text-xl font-bold mt-6 mb-3">1.2 The Asynchronous Multi-Threaded Architecture</h3>
+        <p class="mb-3">The <code>async_mpc_controller_node.py</code> solves this by decoupling the control loop from the optimization loop using Python's <code>threading</code> module:</p>
+        <ul class="list-disc pl-8 mb-4 space-y-2">
+            <li><strong>State Thread (ROS2 Executor):</strong> Runs continuously at high frequency, updating odometry and obstacle data without interruption.</li>
+            <li><strong>Solver Thread (Background):</strong> Runs a continuous <code>while rclpy.ok()</code> loop. It securely locks the latest state, solves the CasADi non-linear programming problem, and stores the optimal control effort <code>(v, omega)</code>.</li>
+            <li><strong>Publisher Timer (Foreground):</strong> A lightweight ROS2 timer executes at a strict 30Hz, reading the most recently available <code>(v, omega)</code> from the solver thread and publishing to <code>/cmd_vel</code>.</li>
+        </ul>
+
+        <div class="bg-blue-50 border-l-4 border-blue-600 p-4 mt-6 mb-4">
+            <h4 class="font-bold text-blue-800">Crucial Advantage: Emergency Overrides</h4>
+            <p class="text-sm mt-1">Because the publisher loop is decoupled, it can react instantly to environmental changes. As implemented in the codebase, if the robot's state thread detects an obstacle within 0.35m, the publisher bypasses the MPC entirely and instantly issues an <strong>Emergency Reverse</strong> command (\(v = -0.50, \omega = 2.0\)). This guarantees collision avoidance without waiting for the slow optimization solver to converge.</p>
+        </div>
+    </section>
+
+    <!-- Page break for printing -->
+    <div class="page-break"></div>
+
+    <!-- SECTION 2 -->
+    <section class="mb-12">
+        <h2 class="text-3xl font-bold mb-6 border-b pb-2">2. PID Controller Implementation for Lissajous Tracking</h2>
+
+        <p class="mb-4">The standalone <code>pid_lissajous_sim.py</code> module verifies the base line-tracking capabilities of a differential-drive robot following a continuous Figure-8 (Lissajous) trajectory using Proportional-Integral-Derivative (PID) control.</p>
+
+        <h3 class="text-xl font-bold mt-6 mb-3">2.1 Mathematical Formulation of the Reference</h3>
+        <p class="mb-2">The infinity-shaped Lissajous curve is parameterized by time \(t\):</p>
+        <div class="math-block">
+            \[ x_r(t) = A \sin(\omega t) \]
+            \[ y_r(t) = B \sin(2\omega t) \]
+        </div>
+        <p class="mb-2">To align the robot tangent to the path, the reference heading \( \theta_r(t) \) is determined via the analytical derivatives of the curve:</p>
+        <div class="math-block">
+            \[ \dot{x}_r(t) = A \omega \cos(\omega t) \]
+            \[ \dot{y}_r(t) = 2B \omega \cos(2\omega t) \]
+            \[ \theta_r(t) = \text{atan2}(\dot{y}_r(t), \dot{x}_r(t)) \]
+        </div>
+
+        <h3 class="text-xl font-bold mt-6 mb-3">2.2 Error Computation</h3>
+        <p class="mb-2">At any instant \(k\), the robot is at state \([x, y, \theta]\). The control errors are:</p>
+        <div class="math-block">
+            \[ e_{dist} = \sqrt{(x_r - x)^2 + (y_r - y)^2} \]
+        </div>
+        <p class="mb-2">The desired heading angle points directly at the reference point: \( \theta_{des} = \text{atan2}(y_r - y, x_r - x) \). The angular error is wrapped to \([-\pi, \pi]\):</p>
+        <div class="math-block">
+            \[ e_{head} = (\theta_{des} - \theta) \pmod{2\pi} \]
+        </div>
+        <p class="text-sm italic mb-4">Note: If \(e_{dist} < 0.05\)m, \( \theta_{des} \) switches to \( \theta_r(t) \) to prevent rapid spin oscillations when intersecting the exact reference point.</p>
+
+        <h3 class="text-xl font-bold mt-6 mb-3">2.3 Dual PID Control Laws</h3>
+        <p class="mb-2">The system utilizes two independent PID loops. The linear velocity \( v \) incorporates a directional projection factor \(\cos(e_{head})\) to prevent the robot from driving forward when it is facing away from the target:</p>
+        
+        <div class="bg-gray-100 p-4 rounded-lg math-block">
+            \[ v_{cmd} = \left( K_{p,v} e_{dist} + K_{i,v} \int e_{dist} dt + K_{d,v} \frac{d e_{dist}}{dt} \right) \cdot \cos(e_{head}) \]
+            <br>
+            \[ \omega_{cmd} = K_{p,\omega} e_{head} + K_{i,\omega} \int e_{head} dt + K_{d,\omega} \frac{d e_{head}}{dt} \]
+        </div>
+
+        <h3 class="text-xl font-bold mt-6 mb-3">2.4 Algorithmic Implementation Details</h3>
+        <ul class="list-disc pl-8 mb-4 space-y-3">
+            <li><strong>Anti-Windup Clamp:</strong> The discrete integral term \(I_{err} \mathrel{+}= e \cdot \Delta t\) is strictly clipped to \([\text{out}_{min}/K_i, \text{out}_{max}/K_i]\). This prevents the integral from accumulating excessively during large turns, avoiding persistent overshoots.</li>
+            <li><strong>Kinematic Integration:</strong> The computed velocities are clamped to physical limits (\(|v| \le 2.0\) m/s, \(|\omega| \le 3.0\) rad/s) and passed through the unicycle kinematic model:
+                <div class="math-block text-sm">
+                    \[ x_{k+1} = x_k + v_{cmd} \cos(\theta_k) \Delta t \]
+                    \[ y_{k+1} = y_k + v_{cmd} \sin(\theta_k) \Delta t \]
+                    \[ \theta_{k+1} = \theta_k + \omega_{cmd} \Delta t \]
+                </div>
+            </li>
+            <li><strong>Visualization:</strong> The implementation leverages <code>matplotlib.animation</code> running at 50Hz, actively logging position, reference paths, and real-time control efforts to empirically validate the system's stability.</li>
+        </ul>
+    </section>
+
+    <!-- Footer -->
+    <div class="mt-12 text-center text-sm text-gray-400 no-print">
+        <p>This document is formatted for direct PDF export. Press Ctrl+P (or Cmd+P) and select "Save as PDF".</p>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,66 @@
+[INFO] [launch]: All log files can be found below /home/agolika/.ros/log/2026-04-30-07-36-51-398990-LAPTOP-TAQNSDCF-3335
+[INFO] [launch]: Default logging verbosity is set to INFO
+urdf_file_name : turtlebot3_burger.urdf
+urdf_file_name : turtlebot3_burger.urdf
+[INFO] [gazebo-1]: process started with pid [3338]
+[INFO] [gazebo-2]: process started with pid [3339]
+[INFO] [robot_state_publisher-3]: process started with pid [3341]
+[INFO] [create-4]: process started with pid [3343]
+[INFO] [parameter_bridge-5]: process started with pid [3344]
+[INFO] [adaptive_mpc_controller_node-6]: process started with pid [3345]
+[INFO] [obstacle_publisher_node-7]: process started with pid [3346]
+[INFO] [rviz2-8]: process started with pid [3347]
+[robot_state_publisher-3] [INFO] [1777534611.812035027] [robot_state_publisher]: Robot initialized
+[create-4] [INFO] [1777534611.814741980] [ros_gz_sim]: Requesting list of world names.
+[rviz2-8] [INFO] [1777534612.063268098] [rviz2]: Stereo is NOT SUPPORTED
+[rviz2-8] [INFO] [1777534612.063503110] [rviz2]: OpenGl version: 4.5 (GLSL 4.5)
+[rviz2-8] [INFO] [1777534612.112823132] [rviz2]: Stereo is NOT SUPPORTED
+[obstacle_publisher_node-7] [INFO] [1777534612.276687742] [obstacle_publisher]: Obstacle publisher started: 3 obstacles
+[create-4] [INFO] [1777534612.484750238] [ros_gz_sim]: Entity creation successful.
+[INFO] [create-4]: process has finished cleanly [pid 3343]
+[parameter_bridge-5] [INFO] [1777534612.832587439] [ros_gz_bridge]: Creating GZ->ROS Bridge: [clock (gz.msgs.Clock) -> clock (rosgraph_msgs/msg/Clock)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.836310575] [ros_gz_bridge]: Creating GZ->ROS Bridge: [joint_states (gz.msgs.Model) -> joint_states (sensor_msgs/msg/JointState)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.841619857] [ros_gz_bridge]: Creating GZ->ROS Bridge: [odom (gz.msgs.Odometry) -> odom (nav_msgs/msg/Odometry)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.844210634] [ros_gz_bridge]: Creating GZ->ROS Bridge: [tf (gz.msgs.Pose_V) -> tf (tf2_msgs/msg/TFMessage)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.846762849] [ros_gz_bridge]: Creating ROS->GZ Bridge: [cmd_vel (geometry_msgs/msg/TwistStamped) -> cmd_vel (gz.msgs.Twist)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.849006711] [ros_gz_bridge]: Creating GZ->ROS Bridge: [imu (gz.msgs.IMU) -> imu (sensor_msgs/msg/Imu)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.850844984] [ros_gz_bridge]: Creating GZ->ROS Bridge: [scan (gz.msgs.LaserScan) -> scan (sensor_msgs/msg/LaserScan)] (Lazy 0)
+[parameter_bridge-5] [INFO] [1777534612.865879766] [ros_gz_bridge]: Passing message from ROS geometry_msgs/msg/TwistStamped to Gazebo gz.msgs.Twist (showing msg only once per type)
+[adaptive_mpc_controller_node-6] Traceback (most recent call last):
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/nodes/adaptive_mpc_controller_node.py", line 20, in <module>
+[adaptive_mpc_controller_node-6]     from hybrid_nav.controllers.adaptive_mpc_controller import AdaptiveMPCController
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/controllers/adaptive_mpc_controller.py", line 30, in <module>
+[adaptive_mpc_controller_node-6]     import casadi as ca
+[adaptive_mpc_controller_node-6] ModuleNotFoundError: No module named 'casadi'
+[adaptive_mpc_controller_node-6] 
+[adaptive_mpc_controller_node-6] During handling of the above exception, another exception occurred:
+[adaptive_mpc_controller_node-6] 
+[adaptive_mpc_controller_node-6] Traceback (most recent call last):
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/hybrid_nav/adaptive_mpc_controller_node", line 33, in <module>
+[adaptive_mpc_controller_node-6]     sys.exit(load_entry_point('hybrid_nav==0.1.0', 'console_scripts', 'adaptive_mpc_controller_node')())
+[adaptive_mpc_controller_node-6]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/hybrid_nav/adaptive_mpc_controller_node", line 25, in importlib_load_entry_point
+[adaptive_mpc_controller_node-6]     return next(matches).load()
+[adaptive_mpc_controller_node-6]            ^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6]   File "/usr/lib/python3.12/importlib/metadata/__init__.py", line 205, in load
+[adaptive_mpc_controller_node-6]     module = import_module(match.group('module'))
+[adaptive_mpc_controller_node-6]              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6]   File "/usr/lib/python3.12/importlib/__init__.py", line 90, in import_module
+[adaptive_mpc_controller_node-6]     return _bootstrap._gcd_import(name[level:], package, level)
+[adaptive_mpc_controller_node-6]            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[adaptive_mpc_controller_node-6]   File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+[adaptive_mpc_controller_node-6]   File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+[adaptive_mpc_controller_node-6]   File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+[adaptive_mpc_controller_node-6]   File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+[adaptive_mpc_controller_node-6]   File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+[adaptive_mpc_controller_node-6]   File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/nodes/adaptive_mpc_controller_node.py", line 25, in <module>
+[adaptive_mpc_controller_node-6]     from controllers.adaptive_mpc_controller import AdaptiveMPCController
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/controllers/__init__.py", line 3, in <module>
+[adaptive_mpc_controller_node-6]     from .lqr_controller import LQRController
+[adaptive_mpc_controller_node-6]   File "/home/agolika/hybrid_ws/install/hybrid_nav/lib/python3.12/site-packages/hybrid_nav/controllers/lqr_controller.py", line 30, in <module>
+[adaptive_mpc_controller_node-6]     from ..models.linearization import Linearizer
+[adaptive_mpc_controller_node-6] ImportError: attempted relative import beyond top-level package
+[ERROR] [adaptive_mpc_controller_node-6]: process has died [pid 3345, exit code 1, cmd '/home/agolika/hybrid_ws/install/hybrid_nav/lib/hybrid_nav/adaptive_mpc_controller_node --ros-args -r __node:=adaptive_mpc_controller --params-file /tmp/launch_params_jp33fwb5'].
+[gazebo-1] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="turtlebot3_burger"]/link[@name="base_scan"]/sensor[@name="hls_lfcd_lds"]/gz_frame_id:/opt/ros/jazzy/share/turtlebot3_gazebo/models/turtlebot3_burger/model.sdf:L141]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].
+[gazebo-2] [1;33mWarning [Utils.cc:132][0m [/sdf/model[@name="turtlebot3_burger"]/link[@name="base_scan"]/sensor[@name="hls_lfcd_lds"]/gz_frame_id:<data-string>:L163]: XML Element[gz_frame_id], child of element[sensor], not defined in SDF. Copying[gz_frame_id] as children of [sensor].

@@ -1,0 +1,8 @@
+[2026-04-24 23:38:47.005] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260424_233847.log
+[2026-04-24 23:39:28.139] [INFO] [mpc_sim] k=96 | Constraint: slack_activated | reason=feasibility
+[2026-04-24 23:41:33.168] [INFO] [mpc_sim] k=666 | Constraint: slack_activated | reason=feasibility
+[2026-04-24 23:42:50.246] [INFO] [mpc_sim] Simulation completed | total_entries=2000 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260424_233847 | max_error_norm=7.048685559212781 | mean_error_norm=2.017850908237174 | final_error_norm=0.12350548054147972
+[2026-04-24 23:42:50.333] [INFO] [mpc_sim] State history exported to logs\states_20260424_233847.csv
+[2026-04-24 23:42:50.380] [INFO] [mpc_sim] Control history exported to logs\controls_20260424_233847.csv
+[2026-04-24 23:42:51.245] [INFO] [mpc_sim] Logs exported to logs\simulation_20260424_233847.json
+[2026-04-24 23:42:51.258] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2000, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260424_233847', 'max_error_norm': 7.048685559212781, 'mean_error_norm': 2.017850908237174, 'final_error_norm': 0.12350548054147972}

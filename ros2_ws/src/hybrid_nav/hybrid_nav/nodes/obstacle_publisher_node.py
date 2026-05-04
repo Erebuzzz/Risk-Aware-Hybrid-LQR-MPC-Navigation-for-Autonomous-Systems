@@ -30,9 +30,9 @@ class ObstaclePublisherNode(Node):
         # Figure-8: x in [-0.5, 0.5], y in [-0.25, 0.25]
         # Placed ~0.15-0.25m off the path to trigger avoidance without blocking
         self.obstacles = [
-            [0.30,  0.35,  0.10],   # Above right loop
-            [-0.35, -0.35, 0.10],   # Below left loop
-            [0.55,  0.00,  0.08],   # Right of crossing
+            [0.30,  0.35,  0.05],   # Above right loop
+            [-0.35, -0.35, 0.05],   # Below left loop
+            [0.55,  0.00,  0.05],   # Right of crossing
         ]
 
         self.timer = self.create_timer(1.0 / publish_rate, self.publish_obstacles)

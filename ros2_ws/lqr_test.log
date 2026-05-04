@@ -1,0 +1,14 @@
+[INFO] [1777486922.957879960] [lqr_controller_node]: ✅ Pure LQR Controller Initialized. Q=[5.0, 5.0, 2.0], R=[1.0, 0.5]
+[INFO] [1777486922.958675180] [lqr_controller_node]: 📐 Generated EXACTLY 1 loop: 629 points.
+[INFO] [1777486922.964381196] [lqr_controller_node]: 🤖 LQR Node Ready to track trajectory
+[INFO] [1777486938.739950155] [lqr_controller_node]: 📡 Odom OK: (0.450, 0.000)
+[INFO] [1777486938.774350171] [lqr_controller_node]: [LQR 40/629] pos=(+0.45,+0.00) err=0.312m | v=0.000 ω=+1.941
+[INFO] [1777486939.769318847] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486940.768667439] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486941.767746518] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486942.767810098] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486943.768359506] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486944.769334850] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486945.768283288] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486946.769178059] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840
+[INFO] [1777486947.768878794] [lqr_controller_node]: [LQR 157/629] pos=(+0.45,+0.00) err=0.050m | v=0.156 ω=-2.840

@@ -1,0 +1,16 @@
+[2026-04-25 00:57:12.950] [INFO] [mpc_sim] SimulationLogger initialized. Log file: logs\simulation_20260425_005712.log
+[2026-04-25 00:57:13.388] [INFO] [mpc_sim] k=25 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:13.472] [INFO] [mpc_sim] k=30 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:13.550] [INFO] [mpc_sim] k=35 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:13.731] [INFO] [mpc_sim] k=40 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:14.602] [INFO] [mpc_sim] k=80 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:22.594] [INFO] [mpc_sim] k=575 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:22.971] [INFO] [mpc_sim] k=595 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:23.055] [INFO] [mpc_sim] k=600 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:24.162] [INFO] [mpc_sim] k=675 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:24.241] [INFO] [mpc_sim] k=680 | Constraint: slack_activated | reason=feasibility
+[2026-04-25 00:57:28.710] [INFO] [mpc_sim] Simulation completed | total_entries=2008 | state_updates=999 | control_actions=999 | errors=0 | warnings=0 | session_timestamp=20260425_005712 | max_error_norm=0.9525363580622546 | mean_error_norm=0.15016643865741744 | final_error_norm=0.07430484513717604
+[2026-04-25 00:57:28.725] [INFO] [mpc_sim] State history exported to logs\states_20260425_005712.csv
+[2026-04-25 00:57:28.731] [INFO] [mpc_sim] Control history exported to logs\controls_20260425_005712.csv
+[2026-04-25 00:57:28.839] [INFO] [mpc_sim] Logs exported to logs\simulation_20260425_005712.json
+[2026-04-25 00:57:28.840] [INFO] [mpc_sim] Logging session finalized. Summary: {'total_entries': 2008, 'state_updates': 999, 'control_actions': 999, 'errors': 0, 'warnings': 0, 'session_timestamp': '20260425_005712', 'max_error_norm': 0.9525363580622546, 'mean_error_norm': 0.15016643865741744, 'final_error_norm': 0.07430484513717604}
