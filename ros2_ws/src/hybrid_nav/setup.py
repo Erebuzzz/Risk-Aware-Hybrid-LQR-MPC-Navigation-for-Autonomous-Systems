@@ -25,7 +25,7 @@ setup(
     zip_safe=True,
     maintainer='Kshitiz and Agolika',
     maintainer_email='kshitiz23@iiserb.ac.in',
-    description='Risk-Aware Hybrid LQR-MPC Navigation for Autonomous Systems',
+    description='Risk-triggered adaptive MPC safety filtering with LQR nominal control for TurtleBot3',
     license='MIT',
     entry_points={
         'console_scripts': [
@@ -37,6 +37,8 @@ setup(
             'mpc_controller_node = hybrid_nav.nodes.mpc_controller_node:main',
             'adaptive_mpc_controller_node = hybrid_nav.nodes.adaptive_mpc_controller_node:main',
             'adaptive_safety_filter_node = hybrid_nav.nodes.adaptive_safety_filter_node:main',
+            'command_distortion_node = hybrid_nav.nodes.command_distortion_node:main',
+            'dynamic_obstacle_publisher_node = hybrid_nav.nodes.dynamic_obstacle_publisher_node:main',
             'twist_relay_node = hybrid_nav.nodes.twist_relay_node:main',
             'async_mpc_controller_node = hybrid_nav.nodes.async_mpc_controller_node:main',
         ],

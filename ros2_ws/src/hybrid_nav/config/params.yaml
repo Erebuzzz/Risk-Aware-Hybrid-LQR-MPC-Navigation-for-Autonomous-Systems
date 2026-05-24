@@ -1,5 +1,8 @@
 # =============================================================================
-# Risk-Aware Hybrid LQR-MPC Navigation — Centralized Parameters
+# Risk-triggered adaptive MPC safety filter — Centralized Parameters
+#
+# The older smooth-blend Hybrid LQR-MPC controller is retained as a baseline.
+# Use adaptive_safety_filter_node for the current publication-oriented method.
 # =============================================================================
 # Load via launch file:
 #   Node(..., parameters=[params_yaml_path])
@@ -128,3 +131,45 @@ obstacle_publisher:
 twist_relay:
   ros__parameters:
     use_sim_time: true
+
+dynamic_obstacle_publisher_node:
+  ros__parameters:
+    use_sim_time: true
+    publish_rate: 10.0
+    message_format: "quintuple"
+    scenario: "crossing"
+    include_static_obstacles: true
+    dynamic_radius: 0.07
+    crossing_x_start: -0.65
+    crossing_y_start: 0.02
+    crossing_x_end: 0.65
+    crossing_y_end: 0.02
+    crossing_speed: 0.08
+    start_delay: 4.0
+    sin_center_x: 0.15
+    sin_center_y: 0.0
+    sin_amplitude: 0.35
+    sin_frequency: 0.04
+
+command_distortion_node:
+  ros__parameters:
+    use_sim_time: true
+    enabled: true
+    input_topic: "/cmd_vel_raw"
+    output_topic: "/cmd_vel"
+    profile: "step"
+    lambda_v: 0.85
+    lambda_omega: 1.15
+    lambda_v_after: 0.70
+    lambda_omega_after: 1.30
+    step_time: 25.0
+    sin_amplitude_v: 0.10
+    sin_amplitude_omega: 0.10
+    sin_frequency: 0.03
+    noise_std_v: 0.005
+    noise_std_omega: 0.02
+    min_scale: 0.40
+    max_scale: 1.60
+    v_max: 0.22
+    omega_max: 2.84
+    seed: 7

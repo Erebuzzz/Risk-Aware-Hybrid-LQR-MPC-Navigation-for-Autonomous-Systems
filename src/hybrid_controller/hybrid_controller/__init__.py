@@ -2,11 +2,16 @@
 Hybrid Controller Package
 =========================
 
-Risk-Aware Hybrid LQR-MPC Navigation Controller for Autonomous Systems.
+Risk-aware LQR/MPC navigation controllers for autonomous systems.
+
+The original smooth/blended Hybrid LQR-MPC controller is retained as a legacy
+baseline. The current research method is a risk-triggered adaptive MPC safety
+filter around an LQR nominal controller.
 
 This package implements:
 - Phase 1: LQR-based trajectory tracking
 - Phase 2: MPC-based safety-critical control with obstacle avoidance
+- Current: LQR nominal control with risk-triggered adaptive MPC safety filtering
 
 Modules:
     - models: Robot kinematics and linearization

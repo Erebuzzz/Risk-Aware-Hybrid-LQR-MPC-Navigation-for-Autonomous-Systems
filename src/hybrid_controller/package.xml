@@ -3,7 +3,7 @@
 <package format="3">
   <name>hybrid_controller</name>
   <version>1.0.0</version>
-  <description>Risk-Aware Hybrid LQR-MPC Controller Library</description>
+  <description>LQR nominal control with adaptive MPC safety filtering and legacy hybrid baselines</description>
   <maintainer email="kshitiz23@iiserb.ac.in">Kshitiz and Agolika</maintainer>
   <license>MIT</license>
 

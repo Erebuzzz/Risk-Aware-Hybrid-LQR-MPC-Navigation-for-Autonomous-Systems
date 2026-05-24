@@ -44,6 +44,13 @@
 This report documents the complete design, implementation, testing, and debugging of a Risk-Aware Hybrid LQR-MPC navigation framework for a differential-drive mobile robot. The system combines the computational efficiency of a Linear Quadratic Regulator (LQR) with the constraint-handling capability of Model Predictive Control (MPC) through a continuous sigmoid-based blending supervisor. We implemented four distinct controller variants: pure LQR for baseline tracking, a CVXPY-based Tube MPC with obstacle avoidance, a CasADi-based Adaptive Nonlinear MPC with online parameter estimation, and a Hybrid LQR-MPC blended controller. This report honestly presents what worked, what failed, and how we debugged each issue. The framework was validated both in offline Python simulations and in a ROS2 Jazzy Gazebo environment using a Turtlebot3 Burger.
 \end{abstract}
 
+\noindent\textbf{Current research pivot.}
+This report is retained as historical background for the older blended Hybrid
+LQR-MPC controller. The blended hybrid method is now treated as a baseline only,
+because direct switching or convex command blending does not guarantee
+preservation of MPC obstacle-avoidance constraints. The current paper direction
+is Risk-Triggered Adaptive MPC Safety Filtering with LQR Nominal Control.
+
 \vspace{0.3cm}
 \noindent\textbf{GitHub Repository:} \url{https://github.com/Erebuzzz/Risk-Aware-Hybrid-LQR-MPC-Navigation-for-Autonomous-Systems}
 

@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """
-Launch: TurtleBot3 + Hybrid LQR-MPC Controller + Obstacles + RViz
-=================================================================
+Launch: TurtleBot3 + Legacy Hybrid LQR-MPC Baseline + Obstacles + RViz
+======================================================================
+
+This launch file is kept for baseline comparison only. The older blended
+Hybrid LQR-MPC logic is not the current publication method because direct
+switching/blending does not guarantee obstacle-avoidance constraint
+preservation. Use turtlebot3_adaptive_safety_filter.launch.py for the new
+risk-triggered adaptive MPC safety-filter method.
 
 Launches:
   1. Gazebo (GZ Sim) with custom obstacle world

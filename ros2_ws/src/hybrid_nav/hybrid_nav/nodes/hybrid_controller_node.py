@@ -20,6 +20,10 @@ from datetime import datetime
 from hybrid_nav.trajectory_index import nearest_idx_open, lookahead_idx_open
 
 
+# Legacy note: this blended Hybrid LQR-MPC node is retained for baseline
+# comparison only. The current paper method is adaptive_safety_filter_node.
+
+
 def euler_from_quaternion(q):
     siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
     cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)

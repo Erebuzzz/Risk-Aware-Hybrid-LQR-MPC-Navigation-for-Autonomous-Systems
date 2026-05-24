@@ -1,0 +1,284 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\definecolor{headingblue}{RGB}{31,77,120}
+\definecolor{darkink}{RGB}{20,31,45}
+
+\titleformat{\section}{\large\bfseries\color{headingblue}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries\color{headingblue}}{\thesubsection}{0.6em}{}
+\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=3pt,topsep=3pt}
+\renewcommand{\arraystretch}{1.2}
+
+\title{\textbf{LMS-Adaptive MPC Safety Filter with LQR Nominal Tracking}\\
+\large A Publication-Oriented Research Concept for Obstacle-Aware TurtleBot3 Navigation}
+\author{Draft research idea}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document proposes a safer and more defensible alternative to direct LQR--MPC switching or command blending. The key idea is to use Linear Quadratic Regulation (LQR) as an efficient nominal trajectory-tracking controller, while an LMS-adaptive nonlinear Model Predictive Controller (MPC) acts as a predictive safety filter. The adaptive MPC does not replace LQR continuously and is not blended with LQR. Instead, it minimally modifies the LQR command only when a short-horizon rollout predicts obstacle-risk or constraint violation. Online Least Mean Squares (LMS) adaptation estimates velocity and yaw-rate scaling errors, making the safety filter robust to actuation mismatch such as wheel slip, payload variation, or battery-dependent velocity loss. A Control Barrier Function (CBF)-style emergency backup can be added for infeasible or slow MPC solves.
+\end{abstract}
+
+\section{Recommended Paper Title}
+\textbf{Risk-Triggered Adaptive MPC Safety Filtering with LQR Nominal Control for Differential-Drive Robot Navigation}
+
+\section{Motivation}
+Naive hybrid switching between LQR and MPC is difficult to justify theoretically. A simple switch can cause discontinuities, chattering, and unclear stability behavior. Similarly, a convex command blend
+\[
+u = w u_{\mathrm{MPC}} + (1-w)u_{\mathrm{LQR}}
+\]
+does not generally preserve obstacle safety. Even if $u_{\mathrm{MPC}}$ is safe, mixing it with an unsafe LQR command can generate a command whose future trajectory collides with an obstacle.
+
+The proposed architecture reframes the problem. LQR remains the efficient nominal controller, and adaptive MPC is introduced as a \emph{safety filter}. The controller is therefore not a vague LQR--MPC mixture; it is a layered safety architecture:
+\[
+\text{Reference} \rightarrow \text{LQR nominal tracking} \rightarrow \text{adaptive MPC safety filter} \rightarrow \text{CBF backup}.
+\]
+
+\section{Research Gap}
+Existing literature studies LQR trajectory tracking, MPC obstacle avoidance, adaptive MPC, and safety filters. The publishable gap is the practical integration of:
+\begin{itemize}
+    \item LQR as a low-cost nominal tracker,
+    \item LMS online parameter adaptation for differential-drive actuation uncertainty,
+    \item risk-triggered adaptive MPC safety filtering instead of continuous MPC,
+    \item CBF-style fallback for infeasible or delayed optimization,
+    \item Gazebo/TurtleBot3 validation under obstacle clutter and model mismatch.
+\end{itemize}
+
+This gives a clear contribution: \textbf{efficient nominal tracking with predictive safety under online model adaptation}.
+
+\section{System Model}
+Consider a differential-drive robot with state
+\[
+x = [p_x,\;p_y,\;\theta]^T
+\]
+and control input
+\[
+u = [v,\;\omega]^T,
+\]
+where $v$ is the commanded linear velocity and $\omega$ is the commanded angular velocity.
+
+To model actuation uncertainty, introduce velocity-scale parameters
+\[
+\vartheta = [\vartheta_v,\;\vartheta_\omega]^T.
+\]
+The adapted nonlinear kinematic model is
+\begin{align}
+\dot{p}_x &= \vartheta_v v \cos\theta, \\
+\dot{p}_y &= \vartheta_v v \sin\theta, \\
+\dot{\theta} &= \vartheta_\omega \omega.
+\end{align}
+
+Here, $\vartheta_v$ captures linear velocity scaling error and $\vartheta_\omega$ captures yaw-rate scaling error.
+
+\section{LMS Online Parameter Adaptation}
+Let $\hat{\vartheta}_k$ be the current parameter estimate. Given previous state $x_{k-1}$ and previous command $u_{k-1}$, the one-step prediction is
+\[
+\hat{x}_k = x_{k-1} + \Delta t f(x_{k-1},u_{k-1},\hat{\vartheta}_k).
+\]
+The measured prediction error is
+\[
+e_k = x_k - \hat{x}_k.
+\]
+The LMS update is
+\[
+\hat{\vartheta}_{k+1}
+= \mathrm{clip}\left(
+\hat{\vartheta}_{k} + \Gamma \Phi_k^T e_k,
+\vartheta_{\min},
+\vartheta_{\max}
+\right),
+\]
+where $\Gamma$ is the adaptation gain and $\Phi_k$ is the parameter sensitivity matrix:
+\[
+\Phi_k =
+\Delta t
+\begin{bmatrix}
+v \cos\theta & 0 \\
+v \sin\theta & 0 \\
+0 & \omega
+\end{bmatrix}.
+\]
+
+\section{Adaptive LQR Nominal Controller}
+At each time step, the robot model is linearized around the reference trajectory and current parameter estimate. The discrete-time local model is
+\[
+\delta x_{k+1} = A_k(\hat{\vartheta})\delta x_k + B_k(\hat{\vartheta})\delta u_k.
+\]
+The LQR gain is computed from the discrete Riccati equation:
+\[
+P = A^T P A - A^T P B(R+B^T P B)^{-1}B^T P A + Q,
+\]
+\[
+K = (R+B^T P B)^{-1}B^T P A.
+\]
+The nominal tracking command is
+\[
+u_{\mathrm{LQR}} = u_{\mathrm{ref}} - K(x-x_{\mathrm{ref}}).
+\]
+
+\section{Risk Prediction}
+Before applying $u_{\mathrm{LQR}}$, the method performs a fast rollout using the adapted model:
+\[
+x_{i+1}^{\mathrm{roll}} =
+x_i^{\mathrm{roll}} + \Delta t f(x_i^{\mathrm{roll}}, u_{\mathrm{LQR}}, \hat{\vartheta}).
+\]
+For each obstacle $j$ with center $p_j$ and radius $r_j$, define the safety function
+\[
+h_j(x) = \|p(x)-p_j\|^2 - (r_j + d_{\mathrm{safe}})^2.
+\]
+The LQR command is considered safe if
+\[
+h_j(x_i^{\mathrm{roll}}) \geq 0
+\quad \forall i,\; \forall j.
+\]
+If this condition holds, the controller applies $u_{\mathrm{LQR}}$ directly. If not, adaptive MPC is activated.
+
+\section{Adaptive MPC Safety Filter}
+The adaptive MPC safety filter solves for a safe command sequence while staying as close as possible to the LQR command. This is the main difference from ordinary MPC: the objective is not to replace LQR, but to minimally modify it.
+
+The proposed finite-horizon problem is
+\begin{align}
+\min_{\{x_i,u_i\}} \quad
+& \sum_{i=0}^{N-1}
+\|x_i-x_{r,i}\|_Q^2
++ \lambda_u \|u_i-u_{\mathrm{LQR},i}\|_R^2
++ \lambda_{\Delta u}\|\Delta u_i\|_S^2 \notag \\
+& + \|x_N-x_{r,N}\|_P^2
+\end{align}
+subject to
+\begin{align}
+x_{i+1} &= x_i + \Delta t f(x_i,u_i,\hat{\vartheta}), \\
+u_{\min} &\leq u_i \leq u_{\max}, \\
+\|p_i-p_j^{\mathrm{obs}}\| &\geq r_j + d_{\mathrm{safe}},
+\quad \forall i,j.
+\end{align}
+
+The applied command is the first MPC input:
+\[
+u_{\mathrm{cmd}} = u_0^\star.
+\]
+
+\section{CBF Backup for Infeasible MPC}
+If adaptive MPC is infeasible, too slow, or numerically unstable, a CBF-style backup can be used. The backup solves a small quadratic program:
+\[
+\min_u \|u-u_{\mathrm{des}}\|^2
+\]
+subject to
+\[
+\dot{h}_j(x,u) + \alpha h_j(x) \geq 0,\quad \forall j,
+\]
+and actuator limits. In practice, a simpler emergency fallback can also be used initially:
+\[
+v = 0,\quad \omega = k_\omega \cdot \mathrm{sign}(\theta_{\mathrm{away}}-\theta).
+\]
+
+\section{Proposed Algorithm}
+\begin{enumerate}
+    \item Read odometry $x_k$ and obstacle list $\mathcal{O}_k$.
+    \item Update $\hat{\vartheta}_k$ using LMS from $(x_{k-1},u_{k-1},x_k)$.
+    \item Compute $u_{\mathrm{LQR}}$ from the adapted LQR tracker.
+    \item Roll out the adapted model using $u_{\mathrm{LQR}}$.
+    \item If the rollout is safe, apply $u_{\mathrm{LQR}}$.
+    \item If the rollout is unsafe, solve the adaptive MPC safety-filter problem.
+    \item If MPC succeeds, apply $u_0^\star$.
+    \item If MPC fails, apply CBF/emergency backup.
+\end{enumerate}
+
+\section{Expected Contributions}
+\begin{enumerate}
+    \item A risk-triggered adaptive MPC safety filter around an LQR nominal tracker.
+    \item LMS-based online adaptation for differential-drive velocity and yaw-rate scaling.
+    \item A least-invasive safety-filter objective that minimizes deviation from LQR.
+    \item A fallback safety mechanism for infeasible or delayed MPC solves.
+    \item Simulation and Gazebo validation against LQR, MPC, adaptive MPC, and naive blended hybrid baselines.
+\end{enumerate}
+
+\section{Evaluation Plan}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{0.22\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\toprule
+\textbf{Controller} & \textbf{Purpose} & \textbf{Expected Observation} \\
+\midrule
+LQR only & Low-compute nominal baseline & Good tracking in free space, unsafe near obstacles. \\
+MPC only & Constraint-aware baseline & Better safety but higher solve time. \\
+Adaptive MPC only & Uncertainty-aware baseline & Robust but expensive if run continuously. \\
+Old blended hybrid & Current ablation & Smooth commands but no formal safety preservation. \\
+Proposed method & Final architecture & Low collision rate with lower compute than continuous adaptive MPC. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Metrics}
+\begin{itemize}
+    \item Collision count and collision rate.
+    \item Minimum obstacle clearance.
+    \item Tracking RMSE and final tracking error.
+    \item Average, median, and 95th percentile solve time.
+    \item MPC intervention rate, i.e., percentage of time MPC overrides LQR.
+    \item Control smoothness: RMS jerk or command variation.
+    \item Parameter estimation error for $\vartheta_v$ and $\vartheta_\omega$.
+\end{itemize}
+
+\section{Implementation Roadmap}
+\begin{enumerate}
+    \item Reuse the existing LMS adaptation and adaptive MPC code.
+    \item Add an adaptive LQR nominal controller using $\hat{\vartheta}$.
+    \item Add a rollout-based risk checker for the LQR command.
+    \item Modify the adaptive MPC objective to include $\|u-u_{\mathrm{LQR}}\|^2$.
+    \item Add a CBF or brake-turn fallback.
+    \item Run experiments in Python simulation, then Gazebo/TurtleBot3.
+    \item Prepare plots: trajectory, clearance, risk, command, solve time, and adaptation curves.
+\end{enumerate}
+
+\section{Important Claim to Use in the Paper}
+The paper should not claim that arbitrary LQR--MPC switching is stable or safe. The safer claim is:
+
+\begin{quote}
+This work proposes an LMS-adaptive predictive safety filter for LQR-based mobile robot tracking. The LQR controller provides computationally efficient nominal tracking, while the adaptive MPC safety filter minimally modifies the nominal command only when predicted future safety constraints are violated.
+\end{quote}
+
+\section{Starter References}
+\begin{thebibliography}{9}
+
+\bibitem{wabersich2021}
+K. P. Wabersich and M. N. Zeilinger,
+\emph{A predictive safety filter for learning-based control of constrained nonlinear dynamical systems},
+Automatica, 2021.
+\url{https://www.research-collection.ethz.ch/handle/20.500.11850/478766}
+
+\bibitem{ames2017}
+A. D. Ames, X. Xu, J. W. Grizzle, and P. Tabuada,
+\emph{Control barrier function based quadratic programs for safety critical systems},
+IEEE Transactions on Automatic Control, 2017.
+\url{https://arxiv.org/abs/1609.06408}
+
+\bibitem{rawlings2017}
+J. B. Rawlings, D. Q. Mayne, and M. Diehl,
+\emph{Model Predictive Control: Theory, Computation, and Design}.
+\url{https://sites.engineering.ucsb.edu/~jbraw/mpc/}
+
+\bibitem{kohler2026}
+J. Koehler,
+\emph{Certainty-equivalent adaptive MPC for uncertain nonlinear systems}, 2026.
+\url{https://arxiv.org/abs/2603.17843}
+
+\bibitem{mobileampc}
+Adaptive model predictive control with localization fluctuation for mobile robot trajectory tracking.
+\url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10006979/}
+
+\end{thebibliography}
+
+\end{document}

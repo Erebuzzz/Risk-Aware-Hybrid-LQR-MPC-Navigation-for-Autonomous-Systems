@@ -42,12 +42,14 @@ def normalize_angle(angle):
 
 
 class DummyObstacle:
-    __slots__ = ("x", "y", "radius")
+    __slots__ = ("x", "y", "radius", "vx", "vy")
 
-    def __init__(self, x, y, radius):
+    def __init__(self, x, y, radius, vx=0.0, vy=0.0):
         self.x = float(x)
         self.y = float(y)
         self.radius = float(radius)
+        self.vx = float(vx)
+        self.vy = float(vy)
 
 
 class AdaptiveSafetyFilterNode(Node):
@@ -113,6 +115,7 @@ class AdaptiveSafetyFilterNode(Node):
         self.tick_count = 0
         self.current_idx = 0
         self.obstacles = []
+        self._bad_obstacle_msg_warned = False
         self.x_prev = None
         self.u_prev = None
 
@@ -205,11 +208,33 @@ class AdaptiveSafetyFilterNode(Node):
 
     def _obs_cb(self, msg):
         obstacles = []
-        for i in range(0, len(msg.data), 3):
-            if i + 2 < len(msg.data):
-                obstacles.append(
-                    DummyObstacle(msg.data[i], msg.data[i + 1], msg.data[i + 2])
+        data = list(msg.data)
+        if len(data) % 5 == 0:
+            stride = 5
+        elif len(data) % 3 == 0:
+            stride = 3
+        else:
+            if not self._bad_obstacle_msg_warned:
+                self.get_logger().warning(
+                    "Ignoring /obstacles message with unsupported length. "
+                    "Use triplets [x,y,r] or quintuples [x,y,r,vx,vy]."
                 )
+                self._bad_obstacle_msg_warned = True
+            return
+
+        for i in range(0, len(data), stride):
+            if stride == 5:
+                obstacles.append(
+                    DummyObstacle(
+                        data[i],
+                        data[i + 1],
+                        data[i + 2],
+                        data[i + 3],
+                        data[i + 4],
+                    )
+                )
+            else:
+                obstacles.append(DummyObstacle(data[i], data[i + 1], data[i + 2]))
         self.obstacles = obstacles
 
     def _control_loop(self):

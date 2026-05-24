@@ -3,6 +3,8 @@
 ## Work Progress Document
 
 > Mathematical foundations and implementation details for the hybrid control architecture.
+>
+> **Current pivot:** the older smooth/blended Hybrid LQR-MPC architecture is retained as historical work and as a baseline only. The current publication-oriented method is Risk-Triggered Adaptive MPC Safety Filtering with LQR Nominal Control, because direct switching/blending does not by itself guarantee obstacle-avoidance safety.
 
 ---
 

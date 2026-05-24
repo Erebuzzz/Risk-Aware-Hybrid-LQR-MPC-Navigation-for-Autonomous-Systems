@@ -3,6 +3,8 @@
 ## Complete Technical Documentation
 
 > In-depth explanation of every module, class, and function in the codebase.
+>
+> **Current pivot:** blended Hybrid LQR-MPC is now a legacy baseline, not the final proposed method. The new method is the risk-triggered adaptive MPC safety filter with LQR nominal control, which avoids claiming that naive switching or convex blending preserves obstacle constraints.
 
 ---
 

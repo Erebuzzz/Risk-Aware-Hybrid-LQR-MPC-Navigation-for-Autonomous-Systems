@@ -14,6 +14,12 @@ where w(t) in [0, 1] is computed from:
     3. Hysteresis deadband: prevents oscillatory switching
     4. Feasibility fallback: w -> 0 if MPC reports infeasible/slow
 
+Current status:
+    This blended controller is retained as a legacy baseline. It smooths command
+    transitions, but convex blending is not claimed to preserve MPC obstacle
+    constraints. The current publication method is the adaptive MPC safety
+    filter in adaptive_mpc_safety_filter.py.
+
 Properties:
     - Continuous: w(t) is Lipschitz-continuous (bounded derivative)
     - No chattering: hysteresis + rate limit guarantee finite switches

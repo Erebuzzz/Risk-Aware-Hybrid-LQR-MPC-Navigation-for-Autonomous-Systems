@@ -19,7 +19,7 @@ setup(
     zip_safe=True,
     maintainer='Kshitiz and Agolika',
     maintainer_email='kshitiz23@iiserb.ac.in',
-    description='Risk-Aware Hybrid LQR-MPC Controller Library',
+    description='LQR nominal control with adaptive MPC safety filtering and legacy hybrid baselines',
     license='MIT',
     entry_points={
         'console_scripts': [],

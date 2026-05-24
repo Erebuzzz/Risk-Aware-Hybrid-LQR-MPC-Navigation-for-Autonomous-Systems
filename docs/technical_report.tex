@@ -76,6 +76,15 @@
 \rule{0.8\linewidth}{0.4pt}\\[0.5cm]
 \noindent\textbf{Abstract.}
 This report documents the complete development of a \textit{Smooth Supervisory Hybrid LQR-MPC} framework for risk-aware autonomous navigation of differential-drive robots. Every phase of development is recorded --- including failed approaches, engineering obstacles, and iterative design decisions --- alongside the final validated results. The system achieves an \textbf{84\,\% reduction} in angular jerk, a \textbf{38$\times$ solver speedup} via CVXPY parametrisation, and \textbf{17\,\% tracking improvement} over hard-switching baselines, confirmed by Monte~Carlo validation across 70 obstacle configurations.
+
+\begin{warnbox}
+\textbf{Current research pivot.} This document is retained as historical
+background for the older smooth/blended Hybrid LQR-MPC controller. The blended
+hybrid method should not be claimed as the final safety-guaranteed publication
+method, because direct switching or convex command blending does not guarantee
+preservation of MPC obstacle-avoidance constraints. The current proposed method
+is the risk-triggered adaptive MPC safety filter with LQR nominal control.
+\end{warnbox}
 \end{titlepage}
 
 \tableofcontents
