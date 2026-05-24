@@ -36,6 +36,7 @@ setup(
             'lqr_controller_node = hybrid_nav.nodes.lqr_controller_node:main',
             'mpc_controller_node = hybrid_nav.nodes.mpc_controller_node:main',
             'adaptive_mpc_controller_node = hybrid_nav.nodes.adaptive_mpc_controller_node:main',
+            'adaptive_safety_filter_node = hybrid_nav.nodes.adaptive_safety_filter_node:main',
             'twist_relay_node = hybrid_nav.nodes.twist_relay_node:main',
             'async_mpc_controller_node = hybrid_nav.nodes.async_mpc_controller_node:main',
         ],
