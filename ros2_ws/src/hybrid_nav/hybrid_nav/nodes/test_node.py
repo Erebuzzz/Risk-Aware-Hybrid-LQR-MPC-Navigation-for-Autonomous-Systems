@@ -16,14 +16,14 @@ class TestNode(Node):
         self.timer = self.create_timer(1.0, self.timer_callback)
         self.count = 0
         
-        self.get_logger().info('✅ Test node started successfully!')
+        self.get_logger().info('Test node started successfully.')
         
         # Test that we can import the controllers
         try:
             import numpy as np
-            self.get_logger().info(f'✅ NumPy {np.__version__} available')
+            self.get_logger().info(f'NumPy {np.__version__} available')
         except ImportError:
-            self.get_logger().error('❌ NumPy not found!')
+            self.get_logger().error('NumPy not found')
 
     def timer_callback(self):
         self.count += 1

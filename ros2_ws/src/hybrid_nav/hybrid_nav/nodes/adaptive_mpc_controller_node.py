@@ -88,7 +88,7 @@ class AdaptiveMPCControllerNode(Node):
             R_diag=R_diag,
             enable_adaptation=True
         )
-        self.get_logger().info('✅ Pure Adaptive MPC Controller Initialized.')
+        self.get_logger().info('Pure Adaptive MPC Controller Initialized.')
 
         self._generate_trajectory()
 
@@ -126,7 +126,7 @@ class AdaptiveMPCControllerNode(Node):
         self._ref_published = False
         self._pub_ref_path_once()
 
-        self.get_logger().info(f'🤖 Adaptive MPC Node Ready. Logging to {log_file}')
+        self.get_logger().info(f'Adaptive MPC Node Ready. Logging to {log_file}')
 
     def _generate_trajectory(self):
         w = self.freq
@@ -149,7 +149,7 @@ class AdaptiveMPCControllerNode(Node):
         self.ref_omega[0] = self.ref_omega[1]
         
         self.N = len(t)
-        self.get_logger().info(f'📐 Generated EXACTLY 1 loop: {self.N} points.')
+        self.get_logger().info(f'Generated reference trajectory: {self.N} points.')
 
     def _odom_cb(self, msg):
         self.x = msg.pose.pose.position.x
@@ -157,7 +157,7 @@ class AdaptiveMPCControllerNode(Node):
         self.theta = euler_from_quaternion(msg.pose.pose.orientation)
         if not self.odom_ok:
             self.odom_ok = True
-            self.get_logger().info(f'📡 Odom OK: ({self.x:.3f}, {self.y:.3f})')
+            self.get_logger().info(f'Odometry connected: ({self.x:.3f}, {self.y:.3f})')
             
         ps = PoseStamped()
         ps.header = msg.header

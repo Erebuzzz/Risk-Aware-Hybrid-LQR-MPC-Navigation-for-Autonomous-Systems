@@ -104,7 +104,7 @@ class MPCControllerNode(Node):
             solver="OSQP"
         )
         self.get_logger().info(
-            f'✅ Pure MPC Controller Initialized. N={self.horizon}, Q={Q_diag}, S={S_diag}'
+            f'Pure MPC Controller Initialized. N={self.horizon}, Q={Q_diag}, S={S_diag}'
         )
 
         # ── Trajectory: generate dense path ────────────────────
@@ -145,7 +145,7 @@ class MPCControllerNode(Node):
         self._ref_published = False
         self._pub_ref_path_once()
 
-        self.get_logger().info(f'🤖 MPC Node Ready. Logging to {log_file}')
+        self.get_logger().info(f'MPC Node Ready. Logging to {log_file}')
 
     # ── Generate Trajectory ────────────────────────────────────
     def _generate_trajectory(self):
@@ -173,7 +173,7 @@ class MPCControllerNode(Node):
         self.ref_omega[0] = self.ref_omega[1]
         
         self.N = len(t)
-        self.get_logger().info(f'📐 Generated EXACTLY 1 loop: {self.N} points.')
+        self.get_logger().info(f'Generated reference trajectory: {self.N} points.')
 
     # ── Callbacks ──────────────────────────────────────────────
     def _odom_cb(self, msg):
@@ -182,7 +182,7 @@ class MPCControllerNode(Node):
         self.theta = euler_from_quaternion(msg.pose.pose.orientation)
         if not self.odom_ok:
             self.odom_ok = True
-            self.get_logger().info(f'📡 Odom OK: ({self.x:.3f}, {self.y:.3f})')
+            self.get_logger().info(f'Odometry connected: ({self.x:.3f}, {self.y:.3f})')
             
         ps = PoseStamped()
         ps.header = msg.header

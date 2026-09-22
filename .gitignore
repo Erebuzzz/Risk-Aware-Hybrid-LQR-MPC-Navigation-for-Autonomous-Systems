@@ -1,33 +1,98 @@
-# Compiled Python files
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
 
+# C extensions
+*.so
 
-# ROS2 Colcon build directories
+# Distribution / packaging
+.Python
 build/
-install/
-log/
-ros2_ws/build/
-ros2_ws/install/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Virtual environments
+# Testing and cache
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+
+# Environments
 venv/
 env/
 .env/
 .venv/
 env.bak/
 venv.bak/
+ENV/
 
-# Project specifics — legacy paths kept so local clutter stays untracked if present
-!evaluation/results/.gitkeep
+# ROS2 Colcon build and log directories
+install/
+log/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+ros2_ws/*.log
 
-# IDEs and Editors
+# Runtime logs and simulation data dumps
+*.log
+logs/*.csv
+logs/*.json
+logs/*.log
+!logs/.gitkeep
+*_output.txt
+output.txt
+sim_output.txt
+error.log
+Output/
+outputs/
+
+# Scratch and intermediate markdown files
+*PLAN*.md
+*STATUS*.md
+*SUMMARY*.md
+*PROGRESS*.md
+TODO*.md
+NOTES*.md
+TEMP*.md
+*.tmp.md
+*.scratch.md
+docs/*_scratch*.md
+docs/*_plan*.md
+docs/*_progress*.md
+docs/*_notes*.md
+
+# IDEs, editors, and operating systems
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 .DS_Store
+Thumbs.db
+Desktop.ini
+*.bak
+*.orig
 
+# Local project folders
 LCS-334-434-684/
+!evaluation/results/.gitkeep

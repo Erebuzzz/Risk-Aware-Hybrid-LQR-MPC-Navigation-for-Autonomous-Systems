@@ -2,7 +2,7 @@
 Path indexing helpers for stable tracking on figure-eights and open polylines.
 
 Closed loop: forward-biased nearest projection reduces branch flips at self-crossings.
-Open polyline: clamped indices — no false wrap from last to first waypoint.
+Open polyline: clamped indices (no false wrap from last to first waypoint).
 """
 
 from __future__ import annotations

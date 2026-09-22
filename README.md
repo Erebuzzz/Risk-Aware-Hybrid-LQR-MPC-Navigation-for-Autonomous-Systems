@@ -4,99 +4,68 @@
 ![ROS2](https://img.shields.io/badge/ROS2-Jazzy-green)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-This repository now follows a new research direction: **Risk-Triggered Adaptive MPC Safety Filtering with LQR Nominal Control** for differential-drive robot navigation.
+This repository implements **Risk-Triggered Adaptive MPC Safety Filtering with LQR Nominal Control** for differential-drive robot navigation.
 
-The older smooth/blended Hybrid LQR-MPC controller is still kept in the codebase, but only as a historical baseline and ablation. It should not be presented as the final publication method, because direct LQR/MPC switching or convex command blending does not by itself guarantee obstacle-avoidance constraint preservation.
+The system uses an LQR controller as the primary nominal tracker for computational efficiency in open space. When a predicted forward rollout detects safety hazard or imminent obstacle proximity, an adaptive nonlinear MPC safety filter steps in to minimally modify the control command while satisfying state and actuator constraints.
 
 **Authors**: Kshitiz Kumar Sinha, Agolika BM
 
 ---
 
-## Current Paper Method
+## System Architecture
 
-The current method uses a layered control architecture:
+The control system architecture decouples nominal tracking, risk evaluation, and constrained safety filtering:
 
-```text
-reference path
-  -> LQR nominal tracking
-  -> LQR rollout risk prediction
-  -> adaptive MPC safety filter when risk is detected
-  -> backup safety command if MPC is infeasible or too slow
+```mermaid
+flowchart TD
+    Ref[Reference Trajectory Generator] -->|x_ref, u_ref| LQR[Nominal LQR Controller]
+    Odom[Odometry / Robot State] --> LQR
+    Odom --> Risk[Predictive Risk Assessor]
+    Obs[Obstacle Tracker / LiDAR] --> Risk
+    
+    LQR -->|u_nominal| Rollout[Fast Forward Rollout]
+    Rollout -->|Predicted States| Risk
+    
+    Risk -->|Risk Level| Arbiter{Safety Risk Detected?}
+    
+    Arbiter -->|No Risk| Plant[Robot Actuators /cmd_vel]
+    Arbiter -->|High Risk| AMPC[Adaptive MPC Safety Filter]
+    
+    AMPC -->|Solver Feasible| FilteredCmd[Minimally Modified u_safe]
+    AMPC -->|Solver Infeasible / Timeout| Backup[Safe Braking / Recovery Fallback]
+    
+    FilteredCmd --> Plant
+    Backup --> Plant
 ```
-
-The key idea is that MPC is no longer blended continuously with LQR. Instead, LQR gives the efficient nominal command, and adaptive MPC acts as a least-invasive safety filter only when the predicted LQR rollout becomes unsafe.
-
-This is the method intended for new Gazebo experiments and publication work.
 
 ---
 
 ## Controller Variants
 
 1. **LQR Controller**
-   - Fast nominal trajectory tracking.
-   - Good in open space.
-   - Does not enforce obstacle constraints.
+   - High-rate nominal trajectory tracking.
+   - Low computational overhead for real-time responsiveness.
+   - Operates in open space without obstacle awareness.
 
-2. **Tube MPC / Pure MPC**
-   - Solves a finite-horizon constrained optimization problem.
-   - Useful as an obstacle-avoidance baseline.
-   - More computationally expensive than LQR.
+2. **Tube MPC / Linearized MPC**
+   - Finite-horizon constrained optimization using linearized obstacle boundaries.
+   - Solved via CVXPY with OSQP backend.
+   - Serves as a standard constrained control benchmark.
 
 3. **Adaptive Nonlinear MPC**
-   - Uses CasADi/IPOPT and LMS-style online parameter adaptation.
-   - Estimates velocity and yaw-rate scale mismatch.
-   - Useful as an adaptive MPC baseline.
+   - Exact nonlinear kinematics optimized using CasADi and IPOPT.
+   - Least Mean Squares (LMS) online parameter adaptation to estimate wheel slip and scale mismatch.
+   - Extended terminal horizon with LQR rollout.
 
 4. **Legacy Blended Hybrid LQR-MPC**
-   - Historical baseline only.
-   - Uses smooth command blending between LQR and MPC.
-   - Not the final proposed method, because blended commands may violate the safety guarantees of the MPC solution.
+   - Baseline controller using continuous sigmoid command blending between LQR and MPC.
+   - Retained in the repository for comparison and ablation studies.
 
 5. **Risk-Triggered Adaptive MPC Safety Filter**
-   - Current proposed method.
-   - LQR runs by default.
-   - A risk predictor rolls out the LQR command sequence.
-   - Adaptive MPC intervenes only when predicted clearance becomes unsafe.
-   - A backup safety command is used if the MPC solver is infeasible or too slow.
-
----
-
-## Option B Gazebo Scenario
-
-Option B adds the stronger publication-oriented simulation setup:
-
-- Actuation mismatch injection through `command_distortion_node`.
-- Moving obstacle publishing through `dynamic_obstacle_publisher_node`.
-- Moving obstacle messages in `[x, y, radius, vx, vy]` format.
-- Metrics and plots for intervention rate, solver time, safety margin, LMS adaptation, and smoothness.
-
-Run the current method:
-
-```bash
-ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py
-```
-
-Useful launch arguments:
-
-```bash
-ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py \
-  use_actuation_mismatch:=true \
-  obstacle_scenario:=crossing \
-  obstacle_format:=quintuple
-```
-
-After a run, generate paper plots:
-
-```bash
-python evaluation/plot_option_b_results.py \
-  --log Output/Logs/adaptive_safety_filter_node_YYYYMMDD_HHMMSS.log
-```
-
-Plots and summaries are written to:
-
-```text
-Output/Plots/AdaptiveSafetyFilter/
-```
+   - Main paper method.
+   - LQR operates as the unconstrained default controller.
+   - Forward prediction detects potential constraint violations in advance.
+   - Adaptive MPC intervenes only when necessary to enforce safety bounds with minimal deviation from nominal commands.
 
 ---
 
@@ -104,26 +73,56 @@ Output/Plots/AdaptiveSafetyFilter/
 
 ```text
 .
-├── README.md
-├── src/hybrid_controller/          # Core controller library
-├── ros2_ws/src/hybrid_nav/         # ROS2/Gazebo nodes and launch files
-├── evaluation/                     # Metrics, plotting, and evaluation helpers
-├── docs/                           # Research proposal, plans, and guides
-├── report/                         # Older blended-hybrid report history
-├── Output/Logs/                    # Runtime logs from ROS2 nodes
-└── requirements.txt
+├── README.md                       # Project documentation and guide
+├── requirements.txt                # Python dependencies
+├── Dockerfile                      # Container environment for ROS2 Jazzy
+├── docker-compose.yml              # Orchestration for simulation
+├── run_simulation.py               # Standalone Python simulation runner
+├── src/
+│   └── hybrid_controller/          # Standalone control library (LQR, MPC, AMPC, Blender)
+├── ros2_ws/
+│   └── src/hybrid_nav/             # ROS2 Jazzy package with Gazebo launch files and nodes
+├── evaluation/                     # Metric evaluation and plotting tools
+├── results/                        # Trajectory, error, and control plots
+├── logs/                           # Telemetry logs (CSV and JSON)
+├── report/                         # Detailed LaTeX technical report and figures
+└── docs/                           # Theoretical notes, proofs, and research proposals
 ```
 
 ---
 
-## Installation
+## Installation and Setup
 
-Install the standalone controller package:
+### 1. Python Environment
+
+Install dependencies and install the `hybrid_controller` library in editable mode:
 
 ```bash
 pip install -r requirements.txt
 pip install -e src/hybrid_controller
 ```
+
+### 2. Standalone Simulation
+
+Run offline simulation across different controller modes without requiring ROS2:
+
+```bash
+# LQR nominal tracking
+python run_simulation.py --mode lqr
+
+# Tube MPC with obstacles
+python run_simulation.py --mode mpc
+
+# Adaptive MPC with parameter estimation
+python run_simulation.py --mode adaptive
+
+# Hybrid blended controller
+python run_simulation.py --mode hybrid
+```
+
+Generated plots are automatically saved to `results/`.
+
+### 3. ROS2 Gazebo Deployment
 
 Build the ROS2 workspace:
 
@@ -133,26 +132,28 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-On Windows/PowerShell with ROS2 sourced, use the equivalent local setup script.
+Launch the adaptive safety filter in Gazebo:
+
+```bash
+ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py
+```
+
+Launch arguments for testing dynamic obstacles or command mismatch:
+
+```bash
+ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py \
+  use_actuation_mismatch:=true \
+  obstacle_scenario:=crossing \
+  obstacle_format:=quintuple
+```
 
 ---
 
-## Main Files
+## Key Files
 
-- Current controller node: `ros2_ws/src/hybrid_nav/hybrid_nav/nodes/adaptive_safety_filter_node.py`
-- Safety-filter controller: `src/hybrid_controller/hybrid_controller/controllers/adaptive_mpc_safety_filter.py`
-- Risk predictor: `src/hybrid_controller/hybrid_controller/controllers/risk_predictor.py`
-- Backup controller: `src/hybrid_controller/hybrid_controller/controllers/backup_safety.py`
-- Option B launch file: `ros2_ws/src/hybrid_nav/launch/turtlebot3_adaptive_safety_filter.launch.py`
-- Option B guide: `docs/option_b_experiment_guide.md`
-- Plotting script: `evaluation/plot_option_b_results.py`
-
----
-
-## Reporting Note
-
-The older reports and blended-hybrid results are useful background, but the paper should state clearly that the old hybrid blend was not sufficient as a safety-guaranteed method. The new claim should be:
-
-> This work proposes an LMS-adaptive predictive safety filter for LQR-based mobile robot tracking. The LQR controller provides computationally efficient nominal tracking, while the adaptive MPC safety filter minimally modifies the nominal command only when predicted future safety constraints are violated.
-
-That framing is much safer and more publication-friendly than claiming arbitrary LQR-MPC switching or blending is guaranteed safe.
+- Adaptive safety filter node: `ros2_ws/src/hybrid_nav/hybrid_nav/nodes/adaptive_safety_filter_node.py`
+- Safety filter algorithm: `src/hybrid_controller/hybrid_controller/controllers/adaptive_mpc_safety_filter.py`
+- Risk prediction: `src/hybrid_controller/hybrid_controller/controllers/risk_predictor.py`
+- Backup safety policy: `src/hybrid_controller/hybrid_controller/controllers/backup_safety.py`
+- Offline evaluation runner: `evaluation/plot_option_b_results.py`
+- Detailed technical report: `report/report.tex`

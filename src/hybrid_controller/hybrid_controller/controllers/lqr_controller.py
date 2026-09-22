@@ -85,9 +85,9 @@ class LQRController:
         self.K: Optional[np.ndarray] = None
         self.P: Optional[np.ndarray] = None  # Riccati solution
         
-        # P0-E: Stability-aware fallback chain for DARE failures
-        self._cached_K: Optional[np.ndarray] = None  # Last successfully computed gain
-        self._cached_P: Optional[np.ndarray] = None  # Last successfully computed Riccati solution
+        # Fallback cache if DARE cannot be solved at a singularity
+        self._cached_K: Optional[np.ndarray] = None
+        self._cached_P: Optional[np.ndarray] = None
         
         # Last operating point
         self._last_v_r: float = 0.0
@@ -98,16 +98,16 @@ class LQRController:
         """
         Compute the optimal LQR feedback gain at the given operating point.
         
-        Solves the DARE:
+        Solves the discrete algebraic Riccati equation (DARE):
             P = A_dᵀ·P·A_d - A_dᵀ·P·B_d·(R + B_dᵀ·P·B_d)⁻¹·B_dᵀ·P·A_d + Q
             
         Then computes:
             K = (R + B_dᵀ·P·B_d)⁻¹·B_dᵀ·P·A_d
         
-        P0-E fallback chain (if DARE fails at the requested operating point):
-            1. Return cached last-good gain (from a previous successful solve)
+        If DARE fails at the requested operating point:
+            1. Return cached gain from previous valid solve
             2. Compute DARE at nominal operating point (v=0.1, theta=0)
-            3. If all else fails, use a conservative proportional gain
+            3. Fall back to proportional gain if numerical failure persists
         
         Args:
             v_r: Reference linear velocity (m/s)
@@ -135,25 +135,18 @@ class LQRController:
             self.P = solve_discrete_are(A_d, B_d, self.Q, self.R)
             
             # Compute optimal gain
-            # K = (R + B_dᵀ·P·B_d)⁻¹·B_dᵀ·P·A_d
             BtPB = B_d.T @ self.P @ B_d
             BtPA = B_d.T @ self.P @ A_d
             self.K = np.linalg.solve(self.R + BtPB, BtPA)
             
-            # P0-E: Cache successful solution for fallback
             self._cached_K = self.K.copy()
             self._cached_P = self.P.copy()
             
         except Exception as e:
-            # P0-E: Stability-aware fallback chain
             if self._cached_K is not None:
-                # Fallback 1: Use last successfully computed gain
                 self.K = self._cached_K.copy()
                 self.P = self._cached_P.copy()
-                print(f"Warning: DARE failed at v={v_r:.3f}, theta={theta_r:.3f}. "
-                      f"Using cached gain. Error: {e}")
             else:
-                # Fallback 2: Compute DARE at a safe nominal operating point
                 try:
                     A_nom, B_nom = self.linearizer.get_discrete_model_explicit(0.1, 0.0)
                     P_nom = solve_discrete_are(A_nom, B_nom, self.Q, self.R)
@@ -163,16 +156,12 @@ class LQRController:
                     self.P = P_nom
                     self._cached_K = self.K.copy()
                     self._cached_P = self.P.copy()
-                    print(f"Warning: DARE failed, using nominal-point gain. Error: {e}")
-                except Exception as e2:
-                    # Fallback 3: Conservative proportional gain (last resort)
+                except Exception:
                     self.K = np.array([
                         [1.0, 0.0, 0.0],
                         [0.0, 0.0, 1.0]
                     ])
                     self.P = self.Q.copy()
-                    print(f"Warning: All DARE fallbacks failed, using P-gain. "
-                          f"Errors: {e}, {e2}")
         
         # Store operating point
         self._last_v_r = v_r

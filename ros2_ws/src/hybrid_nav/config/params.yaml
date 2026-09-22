@@ -1,6 +1,6 @@
 # =============================================================================
-# Risk-triggered adaptive MPC safety filter — Centralized Parameters
-#
+# Risk-triggered adaptive MPC safety filter: Centralized Parameters
+# =============================================================================
 # The older smooth-blend Hybrid LQR-MPC controller is retained as a baseline.
 # Use adaptive_safety_filter_node for the current publication-oriented method.
 # =============================================================================

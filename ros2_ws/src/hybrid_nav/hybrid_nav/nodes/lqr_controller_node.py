@@ -83,7 +83,7 @@ class LQRControllerNode(Node):
             v_max=self.v_max, 
             omega_max=self.omega_max
         )
-        self.get_logger().info(f'✅ Pure LQR Controller Initialized. Q={Q_diag}, R={R_diag}')
+        self.get_logger().info(f'Pure LQR Controller Initialized. Q={Q_diag}, R={R_diag}')
 
         # ── Trajectory: generate dense path ────────────────────
         self._generate_trajectory(dur)
@@ -119,7 +119,7 @@ class LQRControllerNode(Node):
         self._ref_published = False
         self._pub_ref_path_once()
 
-        self.get_logger().info(f'🤖 LQR Node Ready. Logging to {log_file}')
+        self.get_logger().info(f'LQR Node Ready. Logging to {log_file}')
 
     # ── Generate Trajectory ────────────────────────────────────
     def _generate_trajectory(self, duration):
@@ -147,7 +147,7 @@ class LQRControllerNode(Node):
         self.ref_omega[0] = self.ref_omega[1]
         
         self.N = len(t)
-        self.get_logger().info(f'📐 Generated EXACTLY 1 loop: {self.N} points.')
+        self.get_logger().info(f'Generated reference trajectory: {self.N} points.')
 
     # ── Callbacks ──────────────────────────────────────────────
     def _odom_cb(self, msg):
@@ -156,7 +156,7 @@ class LQRControllerNode(Node):
         self.theta = euler_from_quaternion(msg.pose.pose.orientation)
         if not self.odom_ok:
             self.odom_ok = True
-            self.get_logger().info(f'📡 Odom OK: ({self.x:.3f}, {self.y:.3f})')
+            self.get_logger().info(f'Odometry connected: ({self.x:.3f}, {self.y:.3f})')
             
         # Update Robot Trail
         ps = PoseStamped()

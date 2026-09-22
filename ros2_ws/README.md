@@ -1,4 +1,4 @@
-# ROS2 Workspace — TurtleBot3 Hybrid LQR-MPC Navigation
+# ROS2 Workspace: TurtleBot3 Hybrid LQR-MPC Navigation
 
 This directory contains the ROS2 package for running the hybrid LQR-MPC controller on a TurtleBot3 Burger in Gazebo.
 

@@ -33,7 +33,7 @@ class DriveTestNode(Node):
         self.odom_count = 0
         self.x = 0.0
         self.y = 0.0
-        self.get_logger().info('🧪 Drive test started. Waiting for odom...')
+        self.get_logger().info('Drive test started. Waiting for odom...')
 
     def odom_cb(self, msg):
         self.x = msg.pose.pose.position.x
@@ -41,7 +41,7 @@ class DriveTestNode(Node):
         self.odom_count += 1
         if self.odom_count == 1:
             self.start_time = self.get_clock().now()
-            self.get_logger().info(f'📡 First odom at ({self.x:.3f}, {self.y:.3f})')
+            self.get_logger().info(f'First odom received at ({self.x:.3f}, {self.y:.3f})')
 
     def tick(self):
         if self.start_time is None:

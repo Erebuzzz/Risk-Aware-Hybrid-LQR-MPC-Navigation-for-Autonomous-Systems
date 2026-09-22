@@ -5,15 +5,15 @@ Asynchronous Adaptive MPC Controller Node for TurtleBot3
 
 Architecture (3-thread decoupled design):
 ──────────────────────────────────────────
-  Thread 1 — rclpy executor (main)
-      • /odom subscriber   → writes to `_state_lock`-protected state
-      • /obstacles subscriber → writes to `_obs_lock`-protected list
-      • 20 Hz timer         → reads latest [v, ω] under `_cmd_lock`,
+  Thread 1: rclpy executor (main)
+      • /odom subscriber   -> writes to `_state_lock`-protected state
+      • /obstacles subscriber -> writes to `_obs_lock`-protected list
+      • 20 Hz timer         -> reads latest [v, ω] under `_cmd_lock`,
                               publishes TwistStamped to /cmd_vel
-                              (Zero-Order Hold — never blocks)
+                              (Zero-Order Hold, non-blocking)
 
-  Thread 2 — MPC solver (daemon)
-      • Continuous loop: snapshot state → solve → store [v, ω]
+  Thread 2: MPC solver (daemon)
+      • Continuous loop: snapshot state -> solve -> store [v, ω]
       • Runs as fast as IPOPT allows (~6-8 Hz with warm-start)
       • Never blocks the publisher timer
 
@@ -133,7 +133,7 @@ class AsyncMPCControllerNode(Node):
             R_diag=R_diag,
             enable_adaptation=True,
         )
-        self.get_logger().info('✅ Adaptive MPC solver built (CasADi + IPOPT).')
+        self.get_logger().info('Adaptive MPC solver built (CasADi + IPOPT).')
 
         # ── Generate Reference Trajectory ───────────────────────────
         self._generate_trajectory()
@@ -237,9 +237,9 @@ class AsyncMPCControllerNode(Node):
         self._solver_thread.start()
 
         self.get_logger().info(
-            f'🤖 Async MPC Node Ready  |  '
-            f'pub @ {rate:.0f} Hz  |  solver → background thread  |  '
-            f'log → {log_file}'
+            f'Async MPC Node Ready  |  '
+            f'pub @ {rate:.0f} Hz  |  solver in background thread  |  '
+            f'log -> {log_file}'
         )
 
     # ══════════════════════════════════════════════════════════════════
@@ -269,12 +269,12 @@ class AsyncMPCControllerNode(Node):
 
         self.N_traj = len(t)
         self.get_logger().info(
-            f'📐 Trajectory: {self.N_traj} pts, '
+            f'Trajectory: {self.N_traj} pts, '
             f'period={T:.1f}s, A={self.A}m'
         )
 
     # ══════════════════════════════════════════════════════════════════
-    #  THREAD 1a — ODOM CALLBACK (runs on executor)
+    #  THREAD 1a: ODOM CALLBACK (runs on executor)
     # ══════════════════════════════════════════════════════════════════
 
     def _odom_cb(self, msg: Odometry):
@@ -291,7 +291,7 @@ class AsyncMPCControllerNode(Node):
             self._odom_ok = True
 
         if first_odom:
-            self.get_logger().info(f'📡 Odom OK: ({x:.3f}, {y:.3f})')
+            self.get_logger().info(f'Odometry connected: ({x:.3f}, {y:.3f})')
 
         # Robot trail for RViz (append is fast, no lock needed for
         # publisher since only this callback appends)
@@ -303,7 +303,7 @@ class AsyncMPCControllerNode(Node):
         self.trail_pub.publish(self.robot_trail)
 
     # ══════════════════════════════════════════════════════════════════
-    #  THREAD 1b — OBSTACLE CALLBACK (runs on executor)
+    #  THREAD 1b: OBSTACLE CALLBACK (runs on executor)
     # ══════════════════════════════════════════════════════════════════
 
     def _obs_cb(self, msg: Float32MultiArray):
@@ -320,7 +320,7 @@ class AsyncMPCControllerNode(Node):
             self._obstacles = obs_list
 
     # ══════════════════════════════════════════════════════════════════
-    #  THREAD 2 — MPC SOLVER (background daemon)
+    #  THREAD 2: MPC SOLVER (background daemon)
     # ══════════════════════════════════════════════════════════════════
 
     def _solver_loop(self):
@@ -330,10 +330,10 @@ class AsyncMPCControllerNode(Node):
         Runs as fast as IPOPT allows. Each iteration:
           1. Snapshot state & obstacles under their locks
           2. Compute reference window
-          3. Solve MPC (expensive — 50-200 ms)
+          3. Solve MPC (expensive, 50-200 ms)
           4. Store [v, ω] result under _cmd_lock
         """
-        self.get_logger().info('🧮 Solver thread started.')
+        self.get_logger().info('Solver thread started.')
 
         # Wait for first odom before solving
         while not self._shutdown_event.is_set():
@@ -423,18 +423,14 @@ class AsyncMPCControllerNode(Node):
                     f'Solver exception: {e}', throttle_duration_sec=2.0
                 )
 
-            # ════════════════════════════════════════════════════════════
-            # 🚨 NEW BULLETPROOF FIX: EMERGENCY REVERSE OVERRIDE 🚨
-            # If the robot physically touches the obstacle, the MPC fails.
-            # Spinning in place grinds the wheels. We MUST reverse!
+            # Proximity fallback: if robot is within collision margin of an obstacle, reverse and turn
             for obs in obstacles:
                 dist_to_obs = np.hypot(x_current[0] - obs.x, x_current[1] - obs.y)
-                if dist_to_obs < (obs.radius + 0.35 ): # If within 18cm of obstacle center
-                    v = -0.50    # Force reverse!
-                    omega = 2.0 # Force spin to point away from the obstacle
+                if dist_to_obs < (obs.radius + 0.35):
+                    v = -0.50
+                    omega = 2.0
                     mode = 'EMERGENCY_REVERSE'
                     break
-            # ════════════════════════════════════════════════════════════
 
             # Safety clipping
             v = float(np.clip(v, -self.v_max, self.v_max))
@@ -471,7 +467,7 @@ class AsyncMPCControllerNode(Node):
                 )
 
     # ══════════════════════════════════════════════════════════════════
-    #  THREAD 1c — 20 Hz PUBLISHER TIMER (Zero-Order Hold)
+    #  THREAD 1c: 20 Hz PUBLISHER TIMER (Zero-Order Hold)
     # ══════════════════════════════════════════════════════════════════
 
     def _publish_cmd_cb(self):
@@ -479,10 +475,10 @@ class AsyncMPCControllerNode(Node):
         Strictly 20 Hz timer callback.
 
         Grabs the latest [v, ω] from the solver thread and publishes
-        to /cmd_vel. This NEVER blocks — if the solver hasn't finished
+        to /cmd_vel. This never blocks: if the solver has not finished
         a new solve yet, we republish the previous command (ZOH).
         """
-        # Snapshot command under lock (fast — no blocking)
+        # Snapshot command under lock (fast, non-blocking)
         with self._cmd_lock:
             v = self._cmd_v
             omega = self._cmd_omega
@@ -655,7 +651,7 @@ def main(args=None):
     try:
         executor.spin()
     except KeyboardInterrupt:
-        node.get_logger().info('⌨️  KeyboardInterrupt received.')
+        node.get_logger().info('KeyboardInterrupt received.')
     finally:
         node.shutdown()
         node.destroy_node()

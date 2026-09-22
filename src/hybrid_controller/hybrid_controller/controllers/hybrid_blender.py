@@ -170,19 +170,14 @@ class BlendingSupervisor:
     
     def _apply_rate_limit(self, w_target: float) -> float:
         """
-        Apply ASYMMETRIC rate limiting.
-        FAST-ATTACK: Snap to MPC instantly when risk spikes.
-        SLOW-DECAY: Smoothly return to LQR when safe.
+        Apply asymmetric rate limiting to blending weight transitions.
+        
+        Uses a higher rate limit when ramping toward MPC for obstacle response,
+        and a lower rate limit when returning to LQR to preserve smooth tracking.
         """
-        # FAST ATTACK (e.g., 20.0). Goes from 0 to 1 in ~0.05 seconds.
-        # This saves you from crashing.
-        dw_max_up = 20.0 
+        dw_max_up = 20.0
+        dw_max_down = self.dw_max
         
-        # SLOW DECAY (e.g., 2.0). Goes from 1 to 0 in ~0.5 seconds.
-        # This prevents the robot from violently jerking back to the path.
-        dw_max_down = self.dw_max 
-        
-        # Determine if we are ramping up (danger) or ramping down (safe)
         if w_target > self._w_prev:
             max_change = dw_max_up * self.dt
         else:

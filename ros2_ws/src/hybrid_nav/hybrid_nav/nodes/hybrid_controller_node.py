@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Hybrid Controller Node for TurtleBot3 — v5 (Pure Pursuit fix)
+Hybrid Controller Node for TurtleBot3
+Trajectory tracking with obstacle avoidance using LQR-MPC blending.
 """
 
 import numpy as np
@@ -48,9 +49,9 @@ class HybridControllerNode(Node):
         self.declare_parameter('v_max', 0.22)
         self.declare_parameter('omega_max', 2.84)
         self.declare_parameter('use_hybrid', True)
-        self.declare_parameter('lookahead_dist', 0.40)   # FIXED: was 0.20
+        self.declare_parameter('lookahead_dist', 0.40)
         self.declare_parameter('cruise_speed', 0.10)
-        self.declare_parameter('waypoint_reach_dist', 0.08)  # NEW
+        self.declare_parameter('waypoint_reach_dist', 0.08)
 
         rate       = self.get_parameter('control_rate').value
         self.A     = self.get_parameter('trajectory_amplitude').value
@@ -79,9 +80,9 @@ class HybridControllerNode(Node):
             self.risk_calc = RiskMetrics(d_trigger=0.6, d_safe=self.get_parameter('d_safe').value)
             self.Obstacle  = Obstacle
             self.controllers_ok = True
-            self.get_logger().info('✅ MPC available')
+            self.get_logger().info('MPC available')
         except Exception as e:
-            self.get_logger().warn(f'⚠️  MPC not available: {e}')
+            self.get_logger().warn(f'MPC not available: {e}')
 
         self._generate_waypoints(dur)
 
@@ -114,7 +115,7 @@ class HybridControllerNode(Node):
         self._ref_published = False
         self._pub_ref_path_once()
 
-        self.get_logger().info(f'🤖 Hybrid Node Ready. Logging to {log_file}')
+        self.get_logger().info(f'Hybrid Node Ready. Logging to {log_file}')
 
     # ── Waypoint generation (unchanged) ───────────────────────
     def _generate_waypoints(self, duration):
@@ -140,7 +141,7 @@ class HybridControllerNode(Node):
         self.wp_y = np.array(wp_y)
         self.wp_theta = np.array(wp_theta)
         self.n_wp = len(self.wp_x)
-        self.get_logger().info(f'📐 {self.n_wp} waypoints generated')
+        self.get_logger().info(f'{self.n_wp} waypoints generated')
 
     # ── Callbacks ─────────────────────────────────────────────
     def _odom_cb(self, msg):
@@ -149,7 +150,7 @@ class HybridControllerNode(Node):
         self.theta = euler_from_quaternion(msg.pose.pose.orientation)
         if not self.odom_ok:
             self.odom_ok = True
-            self.get_logger().info(f'📡 Odom OK: ({self.x:.3f},{self.y:.3f})')
+            self.get_logger().info(f'Odom OK: ({self.x:.3f},{self.y:.3f})')
             
         ps = PoseStamped()
         ps.header = msg.header

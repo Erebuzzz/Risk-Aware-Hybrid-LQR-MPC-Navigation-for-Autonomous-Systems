@@ -131,11 +131,10 @@ class RiskMetrics:
     def fast_predict_rollout(self, x0: np.ndarray, u_refs: np.ndarray,
                               dt: float = 0.02) -> np.ndarray:
         """
-        Generate predicted states via fast Euler rollout (P1-E fix).
+        Generate predicted states via forward Euler rollout.
         
-        Breaks the circular dependency where predictive risk needs MPC
-        predicted states, but MPC needs risk to decide activation.
-        This rollout uses reference controls and takes ~0.1ms.
+        Predicts future positions along the reference control sequence
+        without requiring an active MPC solve.
         
         Args:
             x0: Current state [px, py, theta]
@@ -167,9 +166,6 @@ class RiskMetrics:
         Compute risk based on predicted trajectory constraint violations.
         
         Checks if any predicted state over the horizon violates safety constraints.
-        
-        P1-E: Can now be called with states from fast_predict_rollout()
-        instead of requiring MPC predicted states.
         
         Args:
             predicted_states: Predicted states (N, 3) over horizon
