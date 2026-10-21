@@ -22,6 +22,15 @@ from .backup_safety import BackupCommand, BackupSafetyController
 from .lqr_controller import LQRController
 from .mpc_controller import MPCSolution
 from .risk_predictor import LQRRiskPredictor, RolloutRisk
+from .riccati_safety_filter import (
+    RiccatiSafetyFilter,
+    SafetyFilterConfig,
+    SafetyFilterSolution,
+)
+from ..models.augmented_dynamics import (
+    AugmentedDifferentialDriveModel,
+    DynamicModelParams,
+)
 
 
 @dataclass
@@ -71,11 +80,15 @@ class AdaptiveMPCSafetyFilter:
         adaptation_gamma: float = 0.005,
         mpc_time_limit_ms: float = 250.0,
         robot_radius: float = 0.105,
+        augmented_backend: Optional[str] = None,
+        augmented_horizon: int = 5,
+        augmented_max_obstacles: int = 8,
     ):
         self.dt = float(dt)
         self.v_max = float(v_max)
         self.omega_max = float(omega_max)
         self.mpc_time_limit_ms = float(mpc_time_limit_ms)
+        self.augmented_safety_filter: Optional[RiccatiSafetyFilter] = None
 
         if Q_diag is None:
             Q_diag = [30.0, 30.0, 5.0]
@@ -112,6 +125,38 @@ class AdaptiveMPCSafetyFilter:
             omega_max=omega_max,
         )
 
+        if augmented_backend is not None:
+            if augmented_backend not in {"python", "rust"}:
+                raise ValueError("augmented_backend must be 'python' or 'rust'")
+            q_augmented = (
+                float(Q_diag[0]),
+                float(Q_diag[1]),
+                float(Q_diag[2]),
+                2.0,
+                1.0,
+            )
+            r_augmented = (float(R_diag[0]), float(R_diag[1]))
+            augmented_model = AugmentedDifferentialDriveModel(
+                DynamicModelParams(dt=dt)
+            )
+            self.augmented_safety_filter = RiccatiSafetyFilter(
+                model=augmented_model,
+                config=SafetyFilterConfig(
+                    horizon=augmented_horizon,
+                    max_obstacles=augmented_max_obstacles,
+                    dt=dt,
+                    d_safe=d_safe,
+                    robot_radius=robot_radius,
+                    v_min=-v_max,
+                    v_max=v_max,
+                    omega_min=-omega_max,
+                    omega_max=omega_max,
+                    q_diag=q_augmented,
+                    r_diag=r_augmented,
+                    backend=augmented_backend,
+                ),
+            )
+
     @property
     def required_state_horizon(self) -> int:
         return self.adaptive_mpc.N_ext + 1
@@ -131,6 +176,35 @@ class AdaptiveMPCSafetyFilter:
         u_prev: np.ndarray,
     ) -> None:
         self.adaptive_mpc.adapt_parameters(x_measured, x_prev, u_prev)
+
+    def compute_augmented_control(
+        self,
+        x0: np.ndarray,
+        x_refs: np.ndarray,
+        u_refs: np.ndarray,
+        obstacles: Sequence[Any] = (),
+        disturbance: Optional[np.ndarray] = None,
+        covariance_sequence: Optional[np.ndarray] = None,
+    ) -> SafetyFilterSolution:
+        """Run the validated 5D RA-PSF backend through this controller seam.
+
+        The legacy ``compute_control`` method remains 3D and preserves the ROS
+        controller contract.  Callers that have actuator-aware state and ESO
+        disturbance estimates can opt into this explicit 5D path.
+        """
+        if self.augmented_safety_filter is None:
+            raise RuntimeError(
+                "augmented_safety_filter is disabled; pass augmented_backend='rust' "
+                "or 'python' when constructing the controller"
+            )
+        return self.augmented_safety_filter.solve(
+            state=np.asarray(x0, dtype=float).reshape(5),
+            references=np.asarray(x_refs, dtype=float),
+            reference_controls=np.asarray(u_refs, dtype=float),
+            obstacles=obstacles,
+            disturbance=disturbance,
+            covariance_sequence=covariance_sequence,
+        )
 
     def compute_control(
         self,

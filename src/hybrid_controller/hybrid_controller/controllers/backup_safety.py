@@ -11,6 +11,11 @@ from typing import Any, Sequence, Tuple
 
 import numpy as np
 
+from ..models.augmented_dynamics import (
+    AugmentedDifferentialDriveModel,
+    DynamicModelParams,
+)
+
 
 @dataclass
 class BackupCommand:
@@ -76,6 +81,103 @@ class BackupSafetyController:
             reason=reason,
             nearest_obstacle_id=obs_idx,
             nearest_distance=dist,
+            heading_error=heading_error,
+        )
+
+    def compute_augmented(
+        self,
+        state: np.ndarray,
+        obstacles: Sequence[Any] = (),
+        *,
+        dt: float = 0.05,
+        tau_v: float = 0.10,
+        tau_omega: float = 0.10,
+        horizon: int = 10,
+        robot_radius: float = 0.20,
+    ) -> BackupCommand:
+        """Choose an emergency command by short-horizon clearance rollout.
+
+        The legacy 3D brake-and-turn command is retained for the original
+        controller.  The actuator-aware path evaluates braking, reversing, and
+        turning candidates with the same five-state model used by RA-PSF.  This
+        avoids selecting a turn direction from only the current obstacle
+        bearing when dynamic obstacles or actuator lag dominate.
+        """
+        state = np.asarray(state, dtype=float).reshape(5)
+        if not np.all(np.isfinite(state)):
+            raise ValueError("state must contain finite values")
+        if horizon < 1:
+            raise ValueError("horizon must be positive")
+        if not obstacles:
+            return BackupCommand(
+                control=np.array([0.0, 0.0], dtype=float),
+                reason="no_obstacles",
+                nearest_obstacle_id=-1,
+                nearest_distance=float("inf"),
+                heading_error=0.0,
+            )
+
+        obs_idx, obs_x, obs_y, nearest_distance = self._nearest_obstacle(
+            state[:3], obstacles
+        )
+        away_heading = float(np.arctan2(state[1] - obs_y, state[0] - obs_x))
+        heading_error = self.normalize_angle(away_heading - state[2])
+        turn_sign = 1.0 if heading_error >= 0.0 else -1.0
+        turn_rates = (
+            0.0,
+            turn_sign * 0.5 * self.omega_max,
+            turn_sign * self.omega_max,
+            -turn_sign * self.omega_max,
+        )
+        reverse_speed = max(-self.v_max, -0.5 * self.v_max)
+        speeds = (0.0, reverse_speed, 0.25 * self.v_max)
+        candidates = [
+            np.array([speed, turn_rate], dtype=float)
+            for speed in speeds
+            for turn_rate in turn_rates
+        ]
+
+        model = AugmentedDifferentialDriveModel(
+            DynamicModelParams(dt=dt, tau_v=tau_v, tau_omega=tau_omega)
+        )
+        best_control = candidates[0]
+        best_score = (-float("inf"), -float("inf"))
+        for candidate in candidates:
+            rollout_state = state.copy()
+            minimum_clearance = float("inf")
+            for step in range(1, horizon + 1):
+                rollout_state = model.step(rollout_state, candidate)
+                for obstacle in obstacles:
+                    ox = self._get_obstacle_value(obstacle, "x", 0.0)
+                    oy = self._get_obstacle_value(obstacle, "y", 0.0)
+                    vx = self._get_obstacle_value(obstacle, "vx", 0.0)
+                    vy = self._get_obstacle_value(obstacle, "vy", 0.0)
+                    radius = self._get_obstacle_value(obstacle, "radius", 0.0)
+                    distance = np.hypot(
+                        rollout_state[0] - (ox + vx * step * dt),
+                        rollout_state[1] - (oy + vy * step * dt),
+                    )
+                    minimum_clearance = min(
+                        minimum_clearance,
+                        float(distance - radius - robot_radius),
+                    )
+            turn_alignment = -abs(candidate[1] - turn_sign * self.omega_max)
+            score = (minimum_clearance, turn_alignment)
+            if score > best_score:
+                best_score = score
+                best_control = candidate
+
+        return BackupCommand(
+            control=np.array(
+                [
+                    np.clip(best_control[0], -self.v_max, self.v_max),
+                    np.clip(best_control[1], -self.omega_max, self.omega_max),
+                ],
+                dtype=float,
+            ),
+            reason="augmented_clearance_backup",
+            nearest_obstacle_id=obs_idx,
+            nearest_distance=nearest_distance,
             heading_error=heading_error,
         )
 

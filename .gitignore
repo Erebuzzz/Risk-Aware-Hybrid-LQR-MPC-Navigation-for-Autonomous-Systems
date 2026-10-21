@@ -64,6 +64,13 @@ output.txt
 sim_output.txt
 error.log
 Output/
+!Output/
+!Output/Plots/
+Output/Plots/*
+!Output/Plots/Paper/
+Output/Plots/Paper/*
+!Output/Plots/Paper/*.png
+!Output/Plots/Paper/*.pdf
 outputs/
 
 # Scratch and intermediate markdown files
@@ -95,4 +102,9 @@ Desktop.ini
 
 # Local project folders
 LCS-334-434-684/
+build_support/
+crates/*/target/
 !evaluation/results/.gitkeep
+/brain/
+.agents/skills
+.opencode

@@ -11,6 +11,111 @@ Model Predictive Control (MPC) computes optimal control inputs by solving a cons
 
 ---
 
+## 1A. Actuator-Aware RA-PSF Formulation
+
+The upgraded safety-filter reference model separates commanded inputs from
+physical velocities.  Its dynamic state is
+
+$$
+x_k = [p_{x,k}, p_{y,k}, \theta_k, v_k, \omega_k]^T,
+\qquad
+u_k = [v_{cmd,k}, \omega_{cmd,k}]^T.
+$$
+
+The exact first-order actuator updates are
+
+$$
+v_{k+1} = a_v v_k + (1-a_v)v_{cmd,k} + \tau_v(1-a_v)\hat d_{v,k},
+$$
+
+$$
+\omega_{k+1} = a_\omega \omega_k + (1-a_\omega)\omega_{cmd,k},
+\qquad
+a_j = \exp(-dt/\tau_j).
+$$
+
+The pose increment is integrated at constant body velocity and constant yaw
+rate over the sample.  A lateral ESO estimate `d_y` is rotated into the world
+frame and included in the position increment.  The implementation returns
+analytical discrete Jacobians `A_k` and `B_k`; the finite-difference gate
+checks these derivatives over 50 random states and disturbance vectors.
+
+The ESO state is
+
+$$
+\hat d_k = [\hat d_{v,k}, \hat d_{y,k}, \hat d_{\omega,k}]^T.
+$$
+
+It is updated from measured pose and velocity residuals.  Its disturbance
+magnitude scales the process covariance used by the risk rollout:
+
+$$
+Q_{ESO}(\hat d_k) = Q_0(1 + \kappa_{slip}\|\hat d_k\|_2).
+$$
+
+For each LTV rollout step and obstacle normal `n`, the Gaussian penetration
+risk is
+
+$$
+\rho_{i,m} = -d_{i,m} + c_\alpha
+\sqrt{n_{i,m}^T\Sigma_{p,i}n_{i,m}},
+\qquad
+c_\alpha = \frac{\phi(\Phi^{-1}(\alpha))}{1-\alpha}.
+$$
+
+The maximum risk drives the hysteresis latch and the same uncertainty padding
+tightens each tangent-plane obstacle constraint.
+
+### Proposition 1: convex blending is not invariant
+
+Let `b(u)` denote a control-affine barrier expression.  Suppose the nominal
+LQR command satisfies `b(u_LQR) = -delta` for `delta > 0`, while a constrained
+MPC command lies on the active boundary with `b(u_MPC) = 0`.  Affinity gives
+
+$$
+b((1-\alpha)u_{LQR} + \alpha u_{MPC})
+= -(1-\alpha)\delta < 0,
+\qquad 0 \leq \alpha < 1.
+$$
+
+Therefore a convex command blend does not preserve the boundary condition.
+The RA-PSF QP instead optimizes a single constrained command, adds a
+step-zero penalty for deviation from LQR, and uses the DARE solution as its
+terminal state weight.
+
+### Reference implementation and current evidence
+
+The reference implementation is in
+`src/hybrid_controller/hybrid_controller/controllers/riccati_safety_filter.py`.
+The Rust parity core is in `crates/ra_psf_core/src/lib.rs`.  The current 500
+solve gate measured a 0.933 ms mean and 3.087 ms p99 for the Rust workspace,
+with zero infeasible or non-finite outputs.  The Python reference measured an
+8.515 ms mean and 20.718 ms p99 under the same 500-solve workload.  The Rust
+ workspace is therefore the production Gate 2 backend, while Python remains the
+ parity reference.
+
+An exploratory 20-trial MuJoCo and RVO2 run at 1.5 m/s measured zero RA-PSF
+collisions, mean angular jerk RMS 27.28, and mean latency 4.87 ms.  Convex
+blending measured jerk RMS 128.15 and hard switching measured 83.23 in the
+same run.  These numbers are diagnostic evidence only.  The completed
+horizon-five, 200-trial shared-seed baseline measured collision rates of 0.735
+for nominal LQR, 1.000 for async NMPC, 0.555 for convex blending, 0.480 for
+hard switching, and 0.520 for RA-PSF.  Positive soft obstacle slack was present,
+so the baseline does not support a safety claim.  The benchmark was then
+corrected to use the LQR nominal rollout as the safety-filter state reference.
+The corrected full Gate 3 rerun and an explicit slack fallback policy remain
+open.  A corrected 20-trial horizon-eight sample with five obstacle slots
+measured a 0.10 collision rate, 7.86 ms mean latency, and 0.741 m RMS
+cross-track error.  This is an improved diagnostic point, but it still does
+not establish the required collision or latency guarantees.  A separate
+horizon-five run with a ten-step risk look-ahead measured a 0.35 collision
+rate, so the longer risk look-ahead is not currently accepted as an
+improvement.  The thresholded actuator-aware fallback preserved the 0.10
+collision rate on the same 20 seeds, but raised mean latency to 9.54 ms and
+angular jerk RMS to 183.97, so it also remains experimental.
+
+---
+
 ## 2. System Model and Parametric Uncertainty
 
 ### 2.1. Nominal Kinematic Model

@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: hybrid_controller
 Version: 1.0.0
-Summary: Risk-Aware Hybrid LQR-MPC Controller Library
+Summary: LQR nominal control with adaptive MPC safety filtering and legacy hybrid baselines
 Maintainer: Kshitiz and Agolika
 Maintainer-email: kshitiz23@iiserb.ac.in
 License: MIT
