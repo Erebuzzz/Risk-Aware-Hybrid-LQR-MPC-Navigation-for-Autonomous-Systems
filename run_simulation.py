@@ -20,8 +20,9 @@ import sys
 
 import numpy as np
 
-# Add the package to path (works without pip install -e)
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ros2_ws", "src", "hybrid_controller"))
+# Add the package to path for source-tree execution without pip install -e.
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "src", "hybrid_controller"))
 
 from hybrid_controller.controllers.adaptive_mpc_controller import AdaptiveMPCController
 from hybrid_controller.controllers.hybrid_blender import BlendingSupervisor
@@ -35,7 +36,7 @@ from hybrid_controller.models.differential_drive import DifferentialDriveRobot
 from hybrid_controller.trajectory.trajectory_factory import TrajectoryFactory
 from hybrid_controller.utils.visualization import Visualizer
 
-PLOTS_ROOT = os.path.join("results")
+PLOTS_ROOT = os.path.join("Output", "Plots")
 
 
 def _plots_sub(*parts: str) -> str:
@@ -99,7 +100,7 @@ def run_lqr_simulation(
         dt: Time step (seconds)
         visualize: Generate plots
         trajectory_type: Geometry label (matches ``--trajectory``); plots go under
-            ``results/LQR/<trajectory_type>/``.
+         ``Output/Plots/LQR/<trajectory_type>/``.
 
     Returns:
         Dictionary with simulation results
@@ -744,8 +745,8 @@ def run_hybrid_simulation(
     visualize: bool = True,
     scenario: str = "default",
     trajectory_type: str = "figure8",
-    output_dir: str = None,
-    actuator_params: ActuatorParams = None,
+    output_dir: str | None = None,
+    actuator_params: ActuatorParams | None = None,
 ) -> dict:
     """
     Run risk-aware hybrid LQR-MPC simulation with continuous blending.
@@ -761,7 +762,7 @@ def run_hybrid_simulation(
         visualize: Generate plots
         scenario: Obstacle scenario
         trajectory_type: Trajectory family to generate
-        output_dir: Override plot directory (default: results/Hybrid/<trajectory>/<scenario>/)
+        output_dir: Override plot directory (default: Output/Plots/Hybrid/<trajectory>/<scenario>/)
         actuator_params: Optional parameters for hardware realism (lag, delay, noise)
 
     Returns:
@@ -871,7 +872,7 @@ def run_hybrid_simulation(
         f"Scenario: {scenario} | Trajectory: {trajectory_type} | Added {len(obstacles)} obstacles"
     )
 
-    # Generate trajectory. This is the critical path fix for generate_hybrid_scenarios.py:
+    # Generate the trajectory used by the legacy baseline scenario runner.
     # the CLI --trajectory value now actually changes the hybrid reference path.
     trajectory = traj_factory.generate(
         trajectory_type,
@@ -1250,7 +1251,7 @@ def main():
         "--output-dir",
         type=str,
         default=None,
-        help="Override plot directory (default: results/Hybrid/<trajectory>/<scenario>)",
+        help="Override plot directory (default: Output/Plots/Hybrid/<trajectory>/<scenario>)",
     )
     parser.add_argument("--no-plot", action="store_true", help="Disable plotting")
     parser.add_argument(

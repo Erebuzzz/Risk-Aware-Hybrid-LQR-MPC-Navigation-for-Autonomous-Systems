@@ -172,7 +172,8 @@ Reference textbooks for theoretical foundations:
 
 ### Phase 5E: Paper Drafting (Synthesis)
 
-**Final Academic Publication Draft**: `docs/IEEE_paper_draft.md`
+**Final Academic Publication Draft**: historical draft, superseded by the
+current theory and experiment documents in `docs/`.
 - **Title**: *Smooth Supervisory Hybrid LQR-MPC with Jerk-Aware Blending for Autonomous Navigation*
 - Consolidated Sections I-VII covering Model, Supervisory Architecture, Jerk-Aware $J_{cost}$ tuning, Theorems 1/2, and Monte Carlo Quantitative Metrics.
 
@@ -191,7 +192,7 @@ Reference textbooks for theoretical foundations:
    - **Control Latency**: Discrete pipeline delay buffer (simulating compute/comms lag)
    - **Execution Noise**: Gaussian noise on applied controls
 
-2. **Advanced Scenarios** (`evaluation/scenarios.py`, NEW):
+2. **Advanced Scenarios** (historical scenario generator, NEW):
    - **Corridor**: Narrow passage constraint test
    - **Bug Trap**: Local minima stress test
    - **Dense Clutter**: High-frequency switching test
@@ -221,13 +222,14 @@ Reference textbooks for theoretical foundations:
    - Added `feasibility_margin: float` field (max slack magnitude from CVXPY solution)
    - Extracted at solve time for real-time feasibility monitoring
 
-3. **Statistical Validation Framework** (`evaluation/statistical_runner.py`, NEW):
+3. **Statistical Validation Framework** (historical validation runner, NEW):
    - Monte Carlo runner comparing 4 controller modes (LQR, MPC, hard-switch, smooth-blend)
    - Randomized obstacle configs with minimum spacing and origin avoidance
    - Noise injection: configurable position/heading Gaussian noise
    - Control delay simulation: discrete pipeline delay buffer
    - Per-run + aggregated output in JSON, CSV, per-run CSV
-   - CLI: `python evaluation/statistical_runner.py --configs 100 --noise 0.01 --delay 2`
+   - CLI: historical command retained in Git history; the active benchmark
+     commands are documented in `benchmarks/README.md`.
 
 **Verified**: Hybrid simulation with feasibility_margin (exit 0), statistical runner 3-config smoke test (exit 0).
 

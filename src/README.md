@@ -1,13 +1,19 @@
-# Source code location
+# Controller package
 
-This repository does not use a single top-level `src/` package. **Project source** lives here:
+The active Python package is `src/hybrid_controller`. It is installed as an
+ament Python package for ROS 2 and can also be imported directly from the
+source tree by the local test and benchmark commands.
 
-| Component | Path |
-|-----------|------|
-| Controller library (LQR, MPC, hybrid, trajectory, viz) | [`ros2_ws/src/hybrid_controller/hybrid_controller/`](../ros2_ws/src/hybrid_controller/hybrid_controller/) |
-| ROS 2 nodes, launch files, config, worlds | [`ros2_ws/src/hybrid_nav/`](../ros2_ws/src/hybrid_nav/) |
-| Standalone scripts (repo root) | [`run_simulation.py`](../run_simulation.py), [`generate_trajectory_plots.py`](../generate_trajectory_plots.py), [`generate_hybrid_scenarios.py`](../generate_hybrid_scenarios.py) |
-| Evaluation scripts | [`evaluation/`](../evaluation/) |
-| Unit tests | [`tests/`](../tests/) |
+```text
+src/hybrid_controller/
+├── hybrid_controller/controllers/   LQR, MPC, risk, backup, and ESO logic
+├── hybrid_controller/models/        Kinematics and actuator-aware dynamics
+├── hybrid_controller/trajectory/    References and progress utilities
+├── hybrid_controller/logging/       Simulation telemetry
+├── package.xml                      ROS 2 package metadata
+└── setup.py                         Python package metadata
+```
 
-There are **no neural-network model weights** in this project (classical / optimization-based control only).
+The ROS 2 nodes live separately in `ros2_ws/src/hybrid_nav`. Docker copies both
+packages into one colcon workspace, so local development does not require
+symlinking controller modules into the ROS 2 package.

@@ -53,24 +53,17 @@ ros2_ws/install/
 ros2_ws/log/
 ros2_ws/*.log
 
-# Runtime logs and simulation data dumps
+# Runtime logs and generated simulation artifacts
 *.log
-logs/*.csv
-logs/*.json
-logs/*.log
+Output/
+results/
+report/logs/
+logs/*
 !logs/.gitkeep
 *_output.txt
 output.txt
 sim_output.txt
 error.log
-Output/
-!Output/
-!Output/Plots/
-Output/Plots/*
-!Output/Plots/Paper/
-Output/Plots/Paper/*
-!Output/Plots/Paper/*.png
-!Output/Plots/Paper/*.pdf
 outputs/
 
 # Scratch and intermediate markdown files
@@ -104,7 +97,8 @@ Desktop.ini
 LCS-334-434-684/
 build_support/
 crates/*/target/
-!evaluation/results/.gitkeep
 /brain/
-.agents/skills
-.opencode
+.agents/
+.opencode/
+opencode.jsonc
+skills-lock.json

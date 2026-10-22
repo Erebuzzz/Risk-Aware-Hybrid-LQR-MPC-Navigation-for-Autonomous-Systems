@@ -52,6 +52,9 @@ MODES = (
     "5_ra_psf_ours",
 )
 
+POSE_INTEGRATOR_CONVENTION = "mujoco_physics_substeps_after_exact_actuator_lag_update"
+ROBOT_RADIUS = 0.20
+
 
 @dataclass
 class TrialMetrics:
@@ -188,9 +191,55 @@ def distance_risk(state: np.ndarray, obstacles: Sequence[Any], trigger: float = 
         x = float(obstacle["x"] if isinstance(obstacle, dict) else obstacle.x)
         y = float(obstacle["y"] if isinstance(obstacle, dict) else obstacle.y)
         radius = float(obstacle["radius"] if isinstance(obstacle, dict) else obstacle.radius)
-        clearance = np.hypot(state[0] - x, state[1] - y) - radius - 0.2
+        clearance = np.hypot(state[0] - x, state[1] - y) - radius - ROBOT_RADIUS
         values.append(np.clip(1.0 - clearance / trigger, 0.0, 1.0))
     return float(max(values))
+
+
+def obstacle_clearances(
+    state: np.ndarray,
+    obstacles: Sequence[Any],
+    robot_radius: float = ROBOT_RADIUS,
+) -> list[float]:
+    """Return robot-boundary clearances for an obstacle snapshot."""
+
+    values: list[float] = []
+    for obstacle in obstacles:
+        ox = obstacle["x"] if isinstance(obstacle, dict) else obstacle.x
+        oy = obstacle["y"] if isinstance(obstacle, dict) else obstacle.y
+        radius = obstacle["radius"] if isinstance(obstacle, dict) else obstacle.radius
+        values.append(
+            float(np.hypot(state[0] - ox, state[1] - oy) - radius - robot_radius)
+        )
+    return values
+
+
+def serialize_obstacle_snapshot(obstacles: Sequence[Any]) -> str:
+    """Serialize obstacle positions, radii, and velocities for trace replay."""
+
+    snapshot: list[dict[str, float]] = []
+    for obstacle in obstacles:
+        if isinstance(obstacle, dict):
+            snapshot.append(
+                {
+                    "x": float(obstacle["x"]),
+                    "y": float(obstacle["y"]),
+                    "radius": float(obstacle["radius"]),
+                    "vx": float(obstacle.get("vx", 0.0)),
+                    "vy": float(obstacle.get("vy", 0.0)),
+                }
+            )
+        else:
+            snapshot.append(
+                {
+                    "x": float(obstacle.x),
+                    "y": float(obstacle.y),
+                    "radius": float(obstacle.radius),
+                    "vx": float(getattr(obstacle, "vx", 0.0)),
+                    "vy": float(getattr(obstacle, "vy", 0.0)),
+                }
+            )
+    return json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
 
 
 def make_reference_window(reference: SpatialFigure8Reference, progress: float, speed: float, dt: float, horizon: int):
@@ -314,6 +363,9 @@ def run_trial(
     steps = max(1, int(round(duration / dt)))
 
     for _ in range(steps):
+        pre_action_state = state.copy()
+        previous_applied_command = previous_command.copy()
+        fallback_active_before = fallback_active
         reference_state, reference_control = path_reference(reference, progress, target_speed, dt)
         x_refs, u_refs = make_reference_window(
             reference, progress, target_speed, dt, risk_horizon
@@ -325,6 +377,9 @@ def run_trial(
         )
         dynamic_obstacles = rvo_world.step(state[:2], world_preferred)
         obstacles = static_obstacles + dynamic_obstacles
+        pre_step_clearances = obstacle_clearances(pre_action_state, obstacles)
+        pre_step_clearance = min(pre_step_clearances) if pre_step_clearances else float("inf")
+        obstacle_snapshot = serialize_obstacle_snapshot(obstacles)
         risk = distance_risk(state, obstacles)
         u_lqr = filter_.nominal_lqr_control(state, reference_state, reference_control)
         disturbance_estimate = eso.update(state, previous_command)
@@ -365,10 +420,13 @@ def run_trial(
         start = time.perf_counter()
         solution = None
         fallback_used = False
+        solver_status = "unknown"
         if mode == "1_nominal_lqr":
             command = u_lqr
             feasible = True
+            solver_status = "nominal_lqr"
         elif mode == "2_async_nmpc":
+            assert async_nmpc is not None
             command, solver_ms, feasible = async_nmpc.command(
                 state,
                 filter_x_refs,
@@ -376,9 +434,11 @@ def run_trial(
                 [Obstacle(float(o["x"]), float(o["y"]), float(o["radius"])) for o in obstacles],
             )
             latency_values.append(solver_ms)
+            solver_status = "async_nmpc_feasible" if feasible else "async_nmpc_failed"
         elif mode == "5_ra_psf_ours" and not risk_latched:
             command = u_lqr
             feasible = True
+            solver_status = "risk_bypass"
             latency_values.append(0.0)
             command = filter_.limit_command(command, previous_command)
         else:
@@ -400,6 +460,7 @@ def run_trial(
             command_filter = solution.optimal_control
             latency_values.append(solution.solve_time_ms)
             feasible = solution.feasible
+            solver_status = str(solution.status)
             if not feasible:
                 fallbacks += 1
             if (
@@ -437,7 +498,8 @@ def run_trial(
         fallback_active = fallback_used
         if mode in ("1_nominal_lqr",):
             latency_values.append((time.perf_counter() - start) * 1000.0)
-        command = np.clip(np.asarray(command, dtype=float), [-2.5, -3.0], [2.5, 3.0])
+        requested_command = np.asarray(command, dtype=float).copy()
+        command = np.clip(requested_command, [-2.5, -3.0], [2.5, 3.0])
         intervention_norm = float(np.linalg.norm(command - u_lqr))
         if intervention_norm > 1e-4:
             interventions += 1
@@ -452,18 +514,22 @@ def run_trial(
         cvar_risks.append(float(cvar_risk))
         current_slack = float(solution.slack_max) if solution is not None else 0.0
         slack_values.append(current_slack if np.isfinite(current_slack) else 0.0)
-        current_clearances: list[float] = []
-        for obstacle in obstacles:
-            ox = obstacle["x"] if isinstance(obstacle, dict) else obstacle.x
-            oy = obstacle["y"] if isinstance(obstacle, dict) else obstacle.y
-            radius = obstacle["radius"] if isinstance(obstacle, dict) else obstacle.radius
-            clearance = float(np.hypot(state[0] - ox, state[1] - oy) - radius - 0.2)
-            clearances.append(clearance)
-            current_clearances.append(clearance)
+        current_clearances = obstacle_clearances(state, obstacles)
+        clearances.extend(current_clearances)
+        post_step_clearance = min(current_clearances) if current_clearances else float("inf")
         trace.append(
             {
                 "step": float(len(trace)),
                 "time_s": float(len(trace) * dt),
+                "dt": float(dt),
+                "pose_integrator": POSE_INTEGRATOR_CONVENTION,
+                "pre_x": float(pre_action_state[0]),
+                "pre_y": float(pre_action_state[1]),
+                "pre_theta": float(pre_action_state[2]),
+                "pre_v": float(pre_action_state[3]),
+                "pre_omega": float(pre_action_state[4]),
+                "previous_applied_v": float(previous_applied_command[0]),
+                "previous_applied_omega": float(previous_applied_command[1]),
                 "x": float(state[0]),
                 "y": float(state[1]),
                 "theta": float(state[2]),
@@ -476,22 +542,33 @@ def run_trial(
                 "cross_track_error": float(cte),
                 "u_lqr_v": float(u_lqr[0]),
                 "u_lqr_omega": float(u_lqr[1]),
+                "requested_command_v": float(requested_command[0]),
+                "requested_command_omega": float(requested_command[1]),
+                "applied_command_v": float(command[0]),
+                "applied_command_omega": float(command[1]),
                 "command_v": float(command[0]),
                 "command_omega": float(command[1]),
+                "tau_v": float(tau_v),
+                "tau_omega": float(tau_omega),
+                "obstacle_snapshot": obstacle_snapshot,
                 "risk": float(risk),
                 "cvar_risk": float(cvar_risk),
                 "eso_dv": float(disturbance_estimate[0]),
                 "eso_dy": float(disturbance_estimate[1]),
                 "eso_domega": float(disturbance_estimate[2]),
                 "risk_latched": bool(risk_latched),
-                "minimum_clearance": float(min(current_clearances))
-                if current_clearances
-                else float("inf"),
+                "pre_step_clearance": float(pre_step_clearance),
+                "post_step_clearance": float(post_step_clearance),
+                "minimum_clearance": float(post_step_clearance),
                 "intervention_norm": intervention_norm,
                 "latency_ms": float(latency_values[-1]),
                 "slack_max": current_slack,
+                "solver_status": solver_status,
                 "feasible": bool(feasible),
                 "fallback": bool(not feasible),
+                "fallback_active_before": bool(fallback_active_before),
+                "fallback_used": bool(fallback_used),
+                "fallback_active": bool(fallback_active),
                 "mode": mode,
             }
         )

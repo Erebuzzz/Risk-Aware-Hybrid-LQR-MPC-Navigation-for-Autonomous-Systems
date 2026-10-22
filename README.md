@@ -1,231 +1,250 @@
-# Risk-Triggered Adaptive MPC Safety Filter with LQR Nominal Control
+# Risk-Aware Hybrid LQR-MPC Navigation
 
-![Python](https://img.shields.io/badge/Python-3.12-blue)
-![ROS2](https://img.shields.io/badge/ROS2-Jazzy-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+Research software for differential-drive navigation with LQR nominal tracking,
+MPC-based safety filtering, actuator-aware dynamics, and ROS 2 simulation.
 
-This repository implements **Risk-Triggered Adaptive MPC Safety Filtering with LQR Nominal Control** for differential-drive robot navigation.
+The repository contains two connected execution paths:
 
-The system uses an LQR controller as the primary nominal tracker for computational efficiency in open space. When a predicted forward rollout detects safety hazard or imminent obstacle proximity, an adaptive nonlinear MPC safety filter steps in to minimally modify the control command while satisfying state and actuator constraints.
+1. A local Python and Rust path for fast controller tests and deterministic
+   MuJoCo/RVO2 benchmarks.
+2. A ROS 2 Jazzy path for TurtleBot3 and Gazebo Sim validation, built through
+   Docker so the ROS installation is reproducible.
 
-**Authors**: Kshitiz Kumar Sinha, Agolika BM
+The current research direction is failure characterization for actuator-limited
+navigation. The older smooth-blend hybrid controller remains available as a
+baseline, but it is not presented as the safety method.
 
-## Validated RA-PSF upgrade
-
-The current research implementation adds a 5D actuator-aware state
-`[p_x, p_y, theta, v, omega]`, a separate spatial progress state `s`, and a
-3D ESO disturbance estimate.  The Riccati-backed tangent-plane safety filter
-uses analytical Gaussian CVaR padding, a DARE terminal cost, a step-zero
-least-invasive penalty, soft obstacle constraints, per-tick control slew
-limits, and a reusable CVXPY/OSQP workspace.
-
-The native Rust extension in `crates/ra_psf_core` provides parity checks for
-the dynamics, Jacobians, rollout, CVaR multiplier, and a stateful full-horizon
-OSQP workspace with primal and dual warm-starting.  The Python filter remains
-the reference formulation for numerical comparison.
-
-The deterministic checks currently pass:
-
-| Check | Result |
-| --- | --- |
-| State, ESO, and spatial projection tests | 3 passed |
-| Rust and Python parity tests | 5 passed |
-| RA-PSF, CVaR, fallback, and controller-seam tests | 10 passed |
-| Existing MPC solution tests | 5 passed |
-| Total test suite | 23 passed |
-| Rust production latency gate | Mean 0.933 ms, p99 3.087 ms, 500 solves |
-| Python reference timing | Mean 8.515 ms, p99 20.718 ms, 500 solves |
-
-The benchmark setup and strict native RVO2 requirement are documented in
-[`benchmarks/README.md`](benchmarks/README.md).
-
-The current exploratory 20-trial run at 1.5 m/s measured zero RA-PSF
-collisions, mean angular jerk RMS of 27.28, and mean latency of 4.87 ms.  The
-same run measured 128.15 for convex blending and 83.23 for hard switching.
-These are preliminary benchmark values.  A 200-trial shared-seed Gate 3
-baseline has now been completed, but it exposed a reference-coordinate mismatch
-and positive soft obstacle slack in the horizon-five benchmark configuration.
-The baseline collision rates were 0.735 for nominal LQR, 1.000 for async NMPC,
-0.555 for convex blending, 0.480 for hard switching, and 0.520 for RA-PSF.
-Those results are diagnostic, not an accepted safety result.  The benchmark
-now uses the LQR nominal rollout as the safety-filter state reference, and a
-rerun of the corrected configuration remains required.  A corrected
-horizon-eight 20-trial sample with five allocated obstacle slots measured a
-0.10 collision rate, 7.86 ms mean latency, and 0.741 m RMS cross-track error.
-The horizon, risk look-ahead, obstacle-slot bound, and experimental
-slack-fallback policy are now explicit command-line options, but the measured
-configurations are not accepted as production safety settings yet.
-
-Diagnostic figures are written to
-[`Output/Plots/Paper/`](Output/Plots/Paper/):
-
-- `fig1_latency_cdf_violin.png` and `.pdf`
-- `fig2_intervention_timeline.png` and `.pdf`
-- `fig3_speed_latency_phase_diagram.png` and `.pdf`
-- `fig4_slip_robustness_ablation.png` and `.pdf`
-
----
-
-## System Architecture
-
-The control system architecture decouples nominal tracking, risk evaluation, and constrained safety filtering:
+## Architecture
 
 ```mermaid
-flowchart TD
-    Ref[Reference Trajectory Generator] -->|x_ref, u_ref| LQR[Nominal LQR Controller]
-    Odom[Odometry / Robot State] --> LQR
-    Odom --> Risk[Predictive Risk Assessor]
-    Obs[Obstacle Tracker / LiDAR] --> Risk
-    
-    LQR -->|u_nominal| Rollout[Fast Forward Rollout]
-    Rollout -->|Predicted States| Risk
-    
-    Risk -->|Risk Level| Arbiter{Safety Risk Detected?}
-    
-    Arbiter -->|No Risk| Plant[Robot Actuators /cmd_vel]
-    Arbiter -->|High Risk| AMPC[Adaptive MPC Safety Filter]
-    
-    AMPC -->|Solver Feasible| FilteredCmd[Minimally Modified u_safe]
-    AMPC -->|Solver Infeasible / Timeout| Backup[Safe Braking / Recovery Fallback]
-    
-    FilteredCmd --> Plant
-    Backup --> Plant
+flowchart LR
+    REF[Reference trajectory] --> LQR[Nominal LQR]
+    ODOM[Odometry] --> LQR
+    OBS[Obstacle state] --> RISK[Risk and clearance gate]
+    LQR --> ROLL[Actuator-aware rollout]
+    ROLL --> RISK
+    RISK -->|safe| CMD[Command limiter]
+    RISK -->|risk or mismatch| PSF[Adaptive MPC safety filter]
+    PSF -->|feasible| CMD
+    PSF -->|infeasible or unsafe slack| BACKUP[Backup stop or turn policy]
+    CMD --> HAL[Simulation or ROS 2 command interface]
+    BACKUP --> HAL
+    HAL --> PLANT[MuJoCo or Gazebo plant]
+    PLANT --> ODOM
+    PLANT --> LOG[Structured telemetry]
 ```
 
----
+The ROS 2 integration follows the same boundary:
 
-## Controller Variants
+```mermaid
+flowchart TB
+    subgraph Core[Controller library]
+        MODEL[Models and actuator dynamics]
+        CTRL[Controllers and safety filters]
+        TRAJ[Trajectory and reference utilities]
+    end
+    subgraph ROS[ROS 2 package]
+        NODE[ROS 2 nodes]
+        LAUNCH[Launch files]
+        CONFIG[Parameters and worlds]
+    end
+    subgraph Runtime[Container runtime]
+        GZ[Gazebo Sim Harmonic]
+        TB3[TurtleBot3 Burger]
+        BRIDGE[ros_gz_bridge]
+    end
+    Core --> NODE
+    CONFIG --> NODE
+    LAUNCH --> NODE
+    NODE <--> BRIDGE
+    BRIDGE <--> GZ
+    GZ --> TB3
+```
 
-1. **LQR Controller**
-   - High-rate nominal trajectory tracking.
-   - Low computational overhead for real-time responsiveness.
-   - Operates in open space without obstacle awareness.
-
-2. **Tube MPC / Linearized MPC**
-   - Finite-horizon constrained optimization using linearized obstacle boundaries.
-   - Solved via CVXPY with OSQP backend.
-   - Serves as a standard constrained control benchmark.
-
-3. **Adaptive Nonlinear MPC**
-   - Exact nonlinear kinematics optimized using CasADi and IPOPT.
-   - Least Mean Squares (LMS) online parameter adaptation to estimate wheel slip and scale mismatch.
-   - Extended terminal horizon with LQR rollout.
-
-4. **Legacy Blended Hybrid LQR-MPC**
-   - Baseline controller using continuous sigmoid command blending between LQR and MPC.
-   - Retained in the repository for comparison and ablation studies.
-
-5. **Risk-Triggered Adaptive MPC Safety Filter**
-   - Main paper method.
-   - LQR operates as the unconstrained default controller.
-   - Forward prediction detects potential constraint violations in advance.
-   - Adaptive MPC intervenes only when necessary to enforce safety bounds with minimal deviation from nominal commands.
-
----
-
-## Repository Structure
+## Repository layout
 
 ```text
 .
-├── README.md                       # Project documentation and guide
-├── requirements.txt                # Python dependencies
-├── Dockerfile                      # Container environment for ROS2 Jazzy
-├── docker-compose.yml              # Orchestration for simulation
-├── run_simulation.py               # Standalone Python simulation runner
-├── src/
-│   └── hybrid_controller/          # Standalone control library (LQR, MPC, AMPC, Blender)
-├── crates/ra_psf_core/              # Rust and PyO3 numerical core
-├── benchmarks/                      # MuJoCo, native RVO2, and latency gates
-├── ros2_ws/
-│   └── src/hybrid_nav/             # ROS2 Jazzy package with Gazebo launch files and nodes
-├── evaluation/                     # Metric evaluation and plotting tools
-├── results/                        # Trajectory, error, and control plots
-├── logs/                           # Telemetry logs (CSV and JSON)
-├── report/                         # Detailed LaTeX technical report and figures
-└── docs/                           # Theoretical notes, proofs, and research proposals
+├── src/hybrid_controller/       Core Python controller package
+├── crates/ra_psf_core/          Rust and PyO3 numerical core
+├── ros2_ws/src/hybrid_nav/      ROS 2 nodes, launches, config, worlds, RViz
+├── benchmarks/                  MuJoCo, RVO2, latency, and recoverability checks
+├── tests/                       Python and Rust/Python parity tests
+├── docs/                        Theory, proofs, references, and reports
+├── report/                      LaTeX report source and report figures
+├── Dockerfile                   ROS 2 Jazzy build image
+├── docker-compose.yml           Local simulation and CI services
+├── .github/workflows/ci.yml     Python, Rust, Docker, and ROS 2 checks
+├── requirements.txt             Local Python dependencies
+└── Makefile                     Common local commands
 ```
 
----
+Generated files belong under `Output/`, `logs/`, or local build directories.
+They are ignored by Git and are not part of the source layout.
 
-## Installation and Setup
+## Local Python and Rust setup
 
-### 1. Python Environment
-
-Install dependencies with `uv` in the Python 3.12 environment and build the
-Rust extension:
+Use Python 3.12 for the local controller and benchmark path:
 
 ```bash
-uv pip install -r requirements.txt
+python -m venv .venv
+source .venv/bin/activate
+export PATH="$HOME/.cargo/bin:$PATH"
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e src/hybrid_controller
 maturin develop --release --manifest-path crates/ra_psf_core/Cargo.toml
 ```
 
-The ROS 2 package remains a separate Jazzy environment.  It is not required
-for the standalone tests or MuJoCo benchmark.
+On Windows PowerShell, activate the environment with:
 
-### 2. Standalone Simulation
-
-Run offline simulation across different controller modes without requiring ROS2:
-
-```bash
-# LQR nominal tracking
-python run_simulation.py --mode lqr
-
-# Tube MPC with obstacles
-python run_simulation.py --mode mpc
-
-# Adaptive MPC with parameter estimation
-python run_simulation.py --mode adaptive
-
-# Hybrid blended controller
-python run_simulation.py --mode hybrid
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
-Generated plots are automatically saved to `results/`.
-
-### 2.1 RA-PSF checks and MuJoCo smoke benchmark
+Run the local checks:
 
 ```bash
-python -m pytest -q tests
-python benchmarks/benchmark_safety_filter.py
-python benchmarks/run_mujoco_monte_carlo.py --trials 1 --duration 0.5
+python -m pytest -q
+python -m compileall -q benchmarks src tests ros2_ws/src/hybrid_nav
+cargo test --manifest-path crates/ra_psf_core/Cargo.toml
 ```
 
-The MuJoCo and RVO2 commands require the environment variables described in
-[`benchmarks/README.md`](benchmarks/README.md).  The runner raises when the
-real RVO2 binding is unavailable.
+The Rust extension must be built before running the parity tests. A system
+Python interpreter that cannot import `ra_psf_rs` is not a valid test
+environment for this repository.
 
-### 3. ROS2 Gazebo Deployment
+## Deterministic recoverability validation
 
-Build the ROS2 workspace:
+The first safety-analysis gate compares the continuous stopping proposition with
+the exact zero-order-hold recurrence used by the actuator-aware model:
 
 ```bash
-cd ros2_ws
-colcon build --symlink-install
-source install/setup.bash
+python -m benchmarks.validate_recoverability_gap \
+  --output Output/Plots/Paper/recoverability_gap_validation
 ```
 
-Launch the adaptive safety filter in Gazebo:
+To include a small MuJoCo plant comparison:
 
 ```bash
-ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py
+python -m benchmarks.validate_recoverability_gap \
+  --include-mujoco \
+  --mujoco-samples 8 \
+  --output Output/Plots/Paper/recoverability_gap_validation
 ```
 
-Launch arguments for testing dynamic obstacles or command mismatch:
+The script writes JSON and CSV records. It reports discrete correction and
+safe-boundary disagreement instead of hiding the difference in a fitted safety
+constant.
+
+## ROS 2 Jazzy with Docker
+
+Docker is the supported ROS 2 setup. The image builds both active packages:
+
+- `src/hybrid_controller`
+- `ros2_ws/src/hybrid_nav`
+
+Build the image:
 
 ```bash
-ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py \
-  use_actuation_mismatch:=true \
+docker compose build jazzy
+```
+
+Run the headless Gazebo Sim scenario:
+
+```bash
+docker compose up jazzy
+```
+
+The default service disables both RViz and the Gazebo graphical client, so it
+does not require an X11 or WSLg display. On a host with a configured display,
+pass `use_gz_gui:=true` and `use_rviz:=true` to the launch command to enable
+visualization.
+
+Run a custom launch file:
+
+```bash
+docker compose run --rm jazzy \
+  ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py \
+  use_rviz:=false \
   obstacle_scenario:=crossing \
   obstacle_format:=quintuple
 ```
 
----
+For a local GUI session on Linux, use a display-enabled Docker setup and run the
+launch command with `use_gz_gui:=true use_rviz:=true`. WSLg provides the display
+bridge on supported WSL2 installations.
 
-## Key Files
+Run the same ROS 2 checks used by CI:
 
-- Adaptive safety filter node: `ros2_ws/src/hybrid_nav/hybrid_nav/nodes/adaptive_safety_filter_node.py`
-- Safety filter algorithm: `src/hybrid_controller/hybrid_controller/controllers/adaptive_mpc_safety_filter.py`
-- Risk prediction: `src/hybrid_controller/hybrid_controller/controllers/risk_predictor.py`
-- Backup safety policy: `src/hybrid_controller/hybrid_controller/controllers/backup_safety.py`
-- Offline evaluation runner: `evaluation/plot_option_b_results.py`
-- Detailed technical report: `report/report.tex`
+```bash
+docker compose --profile ci run --rm ci
+```
+
+The CI service builds the workspace, runs `colcon test`, reports test results,
+and checks that both ROS 2 packages are discoverable.
+
+## ROS 2 package details
+
+The active ROS 2 package is `hybrid_nav`. Its main entry points are:
+
+| Area | Path or command |
+| --- | --- |
+| Current safety-filter node | `ros2 run hybrid_nav adaptive_safety_filter_node` |
+| Current simulation launch | `ros2 launch hybrid_nav turtlebot3_adaptive_safety_filter.launch.py` |
+| Legacy blended baseline | `ros2 launch hybrid_nav turtlebot3_hybrid.launch.py` |
+| Parameters | `ros2_ws/src/hybrid_nav/config/params.yaml` |
+| Gazebo world | `ros2_ws/src/hybrid_nav/worlds/hybrid_obstacle_world.sdf` |
+| RViz configuration | `ros2_ws/src/hybrid_nav/rviz/hybrid_nav.rviz` |
+
+The current launch path uses explicit topics, timestamps, and parameters. The
+legacy blended launch remains for comparison and is labeled as a baseline.
+
+## Benchmark commands
+
+The native RVO2 binding is required for the dynamic-obstacle benchmark. The
+runner raises if the binding is missing instead of silently changing the
+experiment:
+
+```bash
+RVO2_PYTHON_PATH=/path/to/Python-RVO2 \
+python benchmarks/run_mujoco_monte_carlo.py \
+  --trials 20 \
+  --duration 10.0 \
+  --speed 1.5 \
+  --dt 0.05 \
+  --horizon 8 \
+  --max-obstacles 5 \
+  --modes 5_ra_psf_ours \
+  --output Output/Plots/Paper/ablation_results
+```
+
+Benchmark trace files include pre-action state, previous and applied commands,
+requested commands, obstacle snapshots, clearances, solver status, actuator
+time constants, and fallback state.
+
+## Documentation and research scope
+
+- `docs/Adaptive_MPC_Theory.md`: current mathematical formulation.
+- `docs/formal_proofs.md`: formal proof drafts and their assumptions.
+- `docs/REFERENCES.md`: project bibliography.
+- `benchmarks/README.md`: benchmark-specific commands and output schema.
+- `report/report.tex`: historical implementation and evaluation report.
+
+The current work is simulation-only. ROS 2 and Gazebo validation is containerized
+but hardware deployment is out of scope. Results are diagnostic until the
+footprint contract, actuator calibration, controlled state-gap grid, and
+held-out parameter range are all validated.
+
+## Working-tree hygiene
+
+Do not commit:
+
+- `.venv/`, `venv/`, or other local environments.
+- `brain/`, `.agents/`, `.opencode/`, or generated skill metadata.
+- `Output/`, `logs/`, `results/`, `build/`, `install/`, or `ros2_ws/log/`.
+- Python caches, compiled extensions, or local IDE settings.
+
+The Git history retains earlier experiments and legacy branches. The active
+working tree should contain only the current controller, ROS 2 package,
+benchmarks, tests, documentation, and reproducible build configuration.

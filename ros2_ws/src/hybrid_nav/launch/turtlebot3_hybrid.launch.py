@@ -55,6 +55,7 @@ def generate_launch_description():
     # Launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     use_rviz = LaunchConfiguration('use_rviz', default='true')
+    use_gz_gui = LaunchConfiguration('use_gz_gui', default='true')
     x_pose = LaunchConfiguration('x_pose', default='0.0')
     y_pose = LaunchConfiguration('y_pose', default='0.0')
 
@@ -86,6 +87,7 @@ def generate_launch_description():
             os.path.join(ros_gz_sim_dir, 'launch', 'gz_sim.launch.py')
         ),
         launch_arguments={'gz_args': '-g -v1 '}.items(),
+        condition=IfCondition(use_gz_gui),
     )
 
     # 3. Robot State Publisher (publishes TF from TurtleBot3 URDF)
@@ -182,6 +184,9 @@ def generate_launch_description():
     ld.add_action(DeclareLaunchArgument(
         'use_rviz', default_value='true',
         description='Launch RViz2 visualization'))
+    ld.add_action(DeclareLaunchArgument(
+        'use_gz_gui', default_value='true',
+        description='Launch the Gazebo graphical client'))
     ld.add_action(DeclareLaunchArgument(
         'x_pose', default_value='0.0',
         description='Robot initial X position'))

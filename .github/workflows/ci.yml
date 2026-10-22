@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python and Rust checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e src/hybrid_controller
+
+      - name: Build the Rust extension
+        run: maturin develop --release --manifest-path crates/ra_psf_core/Cargo.toml
+
+      - name: Run Python tests
+        run: python -m pytest -q
+
+      - name: Compile Python sources
+        run: python -m compileall -q benchmarks src tests ros2_ws/src/hybrid_nav
+
+      - name: Check Rust crate
+        run: cargo test --manifest-path crates/ra_psf_core/Cargo.toml
+
+  ros2:
+    name: ROS 2 Jazzy container checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose config
+
+      - name: Build ROS 2 image
+        run: docker build --build-arg ROS_DISTRO=jazzy -t risk-aware-hybrid:ci .
+
+      - name: Build and test the ROS 2 workspace
+        run: >-
+          docker run --rm risk-aware-hybrid:ci
+          bash -lc
+          'source /opt/ros/jazzy/setup.bash
+          && source /ros2_ws/install/setup.bash
+          && colcon test --event-handlers console_direct+
+          && colcon test-result --verbose
+          && ros2 pkg list | grep -E "^(hybrid_controller|hybrid_nav)$"'

@@ -80,6 +80,9 @@ class MuJoCoPlant:
         self.data.qpos[2] = 0.16
         self.data.qpos[3:7] = self._yaw_to_quaternion(x[2])
         self.data.qvel[:] = 0.0
+        self.data.qvel[0] = x[3] * np.cos(x[2])
+        self.data.qvel[1] = x[3] * np.sin(x[2])
+        self.data.qvel[5] = x[4]
         self.v_actual = float(x[3])
         self.omega_actual = float(x[4])
         mujoco.mj_forward(self.model, self.data)

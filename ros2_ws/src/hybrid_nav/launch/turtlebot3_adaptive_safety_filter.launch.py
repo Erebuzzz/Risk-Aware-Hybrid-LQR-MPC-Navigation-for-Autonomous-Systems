@@ -33,6 +33,7 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration("use_sim_time", default="true")
     use_rviz = LaunchConfiguration("use_rviz", default="true")
+    use_gz_gui = LaunchConfiguration("use_gz_gui", default="true")
     x_pose = LaunchConfiguration("x_pose", default="0.0")
     y_pose = LaunchConfiguration("y_pose", default="0.0")
     use_actuation_mismatch = LaunchConfiguration(
@@ -63,6 +64,7 @@ def generate_launch_description():
             os.path.join(ros_gz_sim_dir, "launch", "gz_sim.launch.py")
         ),
         launch_arguments={"gz_args": "-g -v1 "}.items(),
+        condition=IfCondition(use_gz_gui),
     )
 
     robot_state_publisher = IncludeLaunchDescription(
@@ -146,6 +148,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     ld.add_action(DeclareLaunchArgument("use_sim_time", default_value="true"))
     ld.add_action(DeclareLaunchArgument("use_rviz", default_value="true"))
+    ld.add_action(DeclareLaunchArgument("use_gz_gui", default_value="true"))
     ld.add_action(DeclareLaunchArgument("x_pose", default_value="0.0"))
     ld.add_action(DeclareLaunchArgument("y_pose", default_value="0.0"))
     ld.add_action(
