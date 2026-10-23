@@ -23,23 +23,26 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
+      - name: Create virtual environment
+        run: python -m venv .venv
+
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install -e src/hybrid_controller
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -r requirements.txt
+          .venv/bin/python -m pip install -e src/hybrid_controller
 
       - name: Build the Rust extension
-        run: maturin develop --release --manifest-path crates/ra_psf_core/Cargo.toml
+        run: .venv/bin/maturin develop --release --manifest-path crates/ra_psf_core/Cargo.toml
 
       - name: Run Python tests
-        run: python -m pytest -q
+        run: .venv/bin/python -m pytest -q
 
       - name: Compile Python sources
-        run: python -m compileall -q benchmarks src tests ros2_ws/src/hybrid_nav
+        run: .venv/bin/python -m compileall -q benchmarks src tests ros2_ws/src/hybrid_nav
 
       - name: Check Rust crate
         run: cargo test --manifest-path crates/ra_psf_core/Cargo.toml
@@ -63,6 +66,7 @@ jobs:
           bash -lc
           'source /opt/ros/jazzy/setup.bash
           && source /ros2_ws/install/setup.bash
-          && colcon test --event-handlers console_direct+
-          && colcon test-result --verbose
+          && /opt/venv/bin/python -c "import cvxpy; print(cvxpy.__version__)"
+          && /opt/venv/bin/colcon test --event-handlers console_direct+
+          && /opt/venv/bin/colcon test-result --verbose
           && ros2 pkg list | grep -E "^(hybrid_controller|hybrid_nav)$"'

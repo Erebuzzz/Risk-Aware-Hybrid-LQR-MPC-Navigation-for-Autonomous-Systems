@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal test: verify ROS2 + Gazebo + controller imports all work."""
+"""Minimal smoke node for verifying ROS 2 topic publication."""
 
 import rclpy
 from rclpy.node import Node

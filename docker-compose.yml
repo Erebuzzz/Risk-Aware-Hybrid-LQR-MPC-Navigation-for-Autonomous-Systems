@@ -51,5 +51,5 @@ services:
       bash -lc
       "source /opt/ros/jazzy/setup.bash &&
       source /ros2_ws/install/setup.bash &&
-      colcon test --event-handlers console_direct+ &&
-      colcon test-result --verbose"
+      /opt/venv/bin/colcon test --event-handlers console_direct+ &&
+      /opt/venv/bin/colcon test-result --verbose"

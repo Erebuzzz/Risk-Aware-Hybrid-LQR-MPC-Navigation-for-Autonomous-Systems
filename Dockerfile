@@ -15,7 +15,6 @@ SHELL ["/bin/bash", "-c"]
 # System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    python3-colcon-common-extensions \
     python3-pip \
     python3-venv \
     ros-${ROS_DISTRO}-turtlebot3-gazebo \
@@ -33,7 +32,8 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt /tmp/requirements.txt
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r /tmp/requirements.txt \
-    && python -m pip install --no-cache-dir colcon-common-extensions
+    && python -m pip install --no-cache-dir --ignore-installed colcon-common-extensions \
+    && python -c "import cvxpy; print('cvxpy', cvxpy.__version__)"
 
 # Copy the two active packages into one colcon workspace.
 COPY ros2_ws /ros2_ws
@@ -45,7 +45,7 @@ RUN python -m pip install --no-cache-dir -e src/hybrid_controller
 
 # Build the ROS 2 workspace.
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    colcon build --symlink-install --event-handlers console_direct+
+    /opt/venv/bin/colcon build --symlink-install --event-handlers console_direct+
 
 # Entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
