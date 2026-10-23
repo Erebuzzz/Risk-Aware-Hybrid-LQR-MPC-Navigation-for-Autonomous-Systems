@@ -28,6 +28,16 @@ The CI-equivalent workspace check is:
 docker compose --profile ci run --rm ci
 ```
 
+Run the bounded Gate 1 experiment, telemetry checks, plots, and report with:
+
+```bash
+make docker-experiment
+```
+
+Results persist under `Output/Gate1` and `Output/Plots/Gate1`. See
+[Docker builds and CI](../docs/docker_build_cloud.md) for the optional
+`BUILDX_BUILDER` setting, CI credentials, and local fallback.
+
 ## Host setup
 
 ```bash

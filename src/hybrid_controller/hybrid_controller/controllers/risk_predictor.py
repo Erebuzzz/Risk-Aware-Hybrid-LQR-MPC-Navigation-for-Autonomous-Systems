@@ -12,6 +12,8 @@ from typing import Any, List, Sequence, Tuple
 
 import numpy as np
 
+from ..models.footprint import DEFAULT_CONTROLLER_ROBOT_RADIUS
+
 
 @dataclass
 class RolloutRisk:
@@ -43,7 +45,7 @@ class LQRRiskPredictor:
         horizon: int = 10,
         dt: float = 0.05,
         d_safe: float = 0.3,
-        robot_radius: float = 0.105,
+        robot_radius: float = DEFAULT_CONTROLLER_ROBOT_RADIUS,
         d_trigger: float = 0.75,
     ):
         self.horizon = int(horizon)

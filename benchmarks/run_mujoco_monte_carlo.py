@@ -38,6 +38,7 @@ from hybrid_controller.models.augmented_dynamics import (
     AugmentedDifferentialDriveModel,
     DynamicModelParams,
 )
+from hybrid_controller.models.footprint import MUJOCO_ROBOT_RADIUS
 from hybrid_controller.trajectory.spatial_reference import SpatialFigure8Reference
 
 from benchmarks.mujoco_scene import MuJoCoPlant, MuJoCoPlantConfig
@@ -53,7 +54,7 @@ MODES = (
 )
 
 POSE_INTEGRATOR_CONVENTION = "mujoco_physics_substeps_after_exact_actuator_lag_update"
-ROBOT_RADIUS = 0.20
+ROBOT_RADIUS = MUJOCO_ROBOT_RADIUS
 
 
 @dataclass
@@ -227,6 +228,9 @@ def serialize_obstacle_snapshot(obstacles: Sequence[Any]) -> str:
                     "radius": float(obstacle["radius"]),
                     "vx": float(obstacle.get("vx", 0.0)),
                     "vy": float(obstacle.get("vy", 0.0)),
+                    "ax": float(obstacle.get("ax", 0.0)),
+                    "ay": float(obstacle.get("ay", 0.0)),
+                    "acceleration_bound": float(obstacle.get("acceleration_bound", 0.0)),
                 }
             )
         else:
@@ -237,6 +241,11 @@ def serialize_obstacle_snapshot(obstacles: Sequence[Any]) -> str:
                     "radius": float(obstacle.radius),
                     "vx": float(getattr(obstacle, "vx", 0.0)),
                     "vy": float(getattr(obstacle, "vy", 0.0)),
+                    "ax": float(getattr(obstacle, "ax", 0.0)),
+                    "ay": float(getattr(obstacle, "ay", 0.0)),
+                    "acceleration_bound": float(
+                        getattr(obstacle, "acceleration_bound", 0.0)
+                    ),
                 }
             )
     return json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
@@ -253,25 +262,55 @@ def make_reference_window(reference: SpatialFigure8Reference, progress: float, s
     return np.asarray(states), np.asarray(controls)
 
 
+def rate_limit_command(
+    command: np.ndarray,
+    previous_command: np.ndarray,
+    config: SafetyFilterConfig,
+    multiplier: float = 1.0,
+) -> np.ndarray:
+    """Apply the same actuator command bounds used by the safety filter."""
+    if multiplier <= 0.0:
+        raise ValueError("rate-limit multiplier must be positive")
+    command = np.asarray(command, dtype=float).reshape(2)
+    previous = np.asarray(previous_command, dtype=float).reshape(2)
+    clipped = np.clip(command, [config.v_min, config.omega_min], [config.v_max, config.omega_max])
+    delta_limit = multiplier * np.asarray(config.max_control_delta, dtype=float)
+    return np.clip(
+        previous + np.clip(clipped - previous, -delta_limit, delta_limit),
+        [config.v_min, config.omega_min],
+        [config.v_max, config.omega_max],
+    )
+
+
 def make_lqr_rollout(
     safety_filter: RiccatiSafetyFilter,
     state: np.ndarray,
     reference_states: np.ndarray,
     reference_controls: np.ndarray,
+    previous_command: np.ndarray | None = None,
     disturbance: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Build the nominal LQR rollout used by the safety filter."""
+    """Build a rate-feasible nominal LQR rollout used by the safety filter."""
     d_hat = np.zeros(3, dtype=float) if disturbance is None else np.asarray(disturbance, dtype=float)
     nominal_states = np.zeros_like(reference_states)
     nominal_controls = np.zeros_like(reference_controls)
     nominal_states[0] = np.asarray(state, dtype=float)
+    previous = (
+        np.zeros(2, dtype=float)
+        if previous_command is None
+        else np.asarray(previous_command, dtype=float).reshape(2)
+    )
     for index in range(len(reference_controls)):
-        nominal_controls[index] = safety_filter.nominal_lqr_control(
+        raw_command = safety_filter.nominal_lqr_control(
             nominal_states[index], reference_states[index], reference_controls[index]
+        )
+        nominal_controls[index] = rate_limit_command(
+            raw_command, previous, safety_filter.config
         )
         nominal_states[index + 1] = safety_filter.model.step(
             nominal_states[index], nominal_controls[index], d_hat
         )
+        previous = nominal_controls[index]
     return nominal_states, nominal_controls
 
 
@@ -381,7 +420,6 @@ def run_trial(
         pre_step_clearance = min(pre_step_clearances) if pre_step_clearances else float("inf")
         obstacle_snapshot = serialize_obstacle_snapshot(obstacles)
         risk = distance_risk(state, obstacles)
-        u_lqr = filter_.nominal_lqr_control(state, reference_state, reference_control)
         disturbance_estimate = eso.update(state, previous_command)
         disturbance_for_controller = (
             disturbance_estimate
@@ -393,8 +431,10 @@ def run_trial(
             state,
             x_refs,
             u_refs,
+            previous_command=previous_command,
             disturbance=disturbance_for_controller,
         )
+        u_lqr = nominal_controls[0].copy()
         covariance_matrices = [
             filter_.model.jacobians(
                 nominal_states[index], nominal_controls[index], disturbance_for_controller
@@ -476,16 +516,15 @@ def run_trial(
                     tau_v=tau_v,
                     tau_omega=tau_omega,
                     horizon=max(10, filter_.N),
+                    robot_radius=ROBOT_RADIUS,
                 )
-                if fallback_active:
-                    fallback_delta = 3.0 * np.asarray(filter_.config.max_control_delta)
-                    command = np.asarray(previous_command, dtype=float) + np.clip(
-                        np.asarray(backup.control, dtype=float) - previous_command,
-                        -fallback_delta,
-                        fallback_delta,
-                    )
-                else:
-                    command = backup.control
+                fallback_multiplier = 3.0 if fallback_active else 1.0
+                command = rate_limit_command(
+                    backup.control,
+                    previous_command,
+                    filter_.config,
+                    multiplier=fallback_multiplier,
+                )
                 feasible = False
                 fallbacks += int(solution.feasible)
                 fallback_used = True

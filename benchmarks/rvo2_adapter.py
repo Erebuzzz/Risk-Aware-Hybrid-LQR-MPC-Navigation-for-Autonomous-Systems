@@ -15,6 +15,8 @@ from typing import Iterable
 
 import numpy as np
 
+from hybrid_controller.models.footprint import MUJOCO_ROBOT_RADIUS
+
 
 class RVO2Unavailable(RuntimeError):
     """Raised when the real RVO2 binding cannot be loaded."""
@@ -65,7 +67,7 @@ class RVO2DynamicWorld:
         self,
         dynamic_agents: Iterable[RVOAgentState],
         dt: float = 0.05,
-        robot_radius: float = 0.20,
+        robot_radius: float = MUJOCO_ROBOT_RADIUS,
         max_speed: float = 2.5,
     ) -> None:
         self._rvo2 = load_rvo2()

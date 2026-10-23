@@ -56,6 +56,8 @@ class ExtendedStateObserver3D:
 
         previous = self._previous_state
         previous_command = self._previous_command
+        if previous_command is None:
+            previous_command = np.zeros(2, dtype=float)
         dt = self.config.dt
         yaw_rate_measured = self._angle_difference(state[2], previous[2]) / dt
         theta = float(previous[2] + 0.5 * yaw_rate_measured * dt)
@@ -117,7 +119,7 @@ class ExtendedStateObserver3D:
             result = self.update(state, command)
             self._previous_state = state
             self.estimate[1] = (1.0 - self.config.beta) * self.estimate[1] + self.config.beta * body_y
-            return result
+            return self.estimate.copy()
         return self.update(state, command)
 
     @staticmethod

@@ -105,6 +105,17 @@ python -m benchmarks.validate_recoverability_gap \
   --output Output/Plots/Paper/recoverability_gap_validation
 ```
 
+The validation reports three contracts separately: a state-only stop distance,
+the continuous rate-aware proposition, and the exact zero-order-hold distance.
+The default `primary` split is the tuning-free deterministic grid. Run the
+fixed held-out split separately and report it without changing thresholds:
+
+```bash
+python -m benchmarks.validate_recoverability_gap \
+  --split held-out \
+  --output Output/Plots/Paper/recoverability_gap_validation_held_out
+```
+
 Add `--include-mujoco --mujoco-samples 8` to measure a small deterministic
 prefix in the current MuJoCo plant. Those measurements are reported separately
 because the plant includes force transmission and friction effects that are not
@@ -123,3 +134,68 @@ previous applied command, requested command, applied command, obstacle snapshot,
 pre-step and post-step clearance, actuator time constants, solver status, and
 fallback state. The legacy `command_v` and `command_omega` fields remain for
 plot compatibility.
+
+## Footprint contracts
+
+The ROS controller keeps its explicit TurtleBot3 safety-margin profile of
+`0.105 m`. The custom MuJoCo plant uses a `0.20 m x 0.14 m` half-extent box,
+so benchmark clearances use its circumscribed radius
+`sqrt(0.20^2 + 0.14^2) = 0.2441 m`. These are named contracts in
+`hybrid_controller.models.footprint`; the benchmark value is not silently
+substituted into the ROS node.
+
+Controlled obstacle fixtures are available in
+`benchmarks/controlled_obstacles.py` for non-reactive constant-velocity and
+bounded-acceleration trials. They are separate from the native RVO2 benchmark.
+
+The two-sided angular-channel diagnostic is implemented in
+`hybrid_controller.controllers.angular_channel`. It evaluates left and right
+turn reachability after yaw lag and command slew, then selects the obstacle-
+appropriate side or the more reachable side on the centerline. It is a
+validation gate only and is not yet connected to the production safety status.
+
+## Gate 1 ROS 2 human-validation report
+
+Process one ROS 2 run at a time. The headless command accepts a Gate 1 run
+directory or `summary.json`, follows its telemetry/raw-log references, and
+retains the harness's failure status:
+
+```bash
+python -m benchmarks.generate_ros_validation_report \
+  --input Output/Gate1/run_001/summary.json \
+  --output Output/Gate1/run_001/plots
+```
+
+For a standalone controller log, pass its exact filename with `--input` and
+`--dt 0.05`. For CSV plus separate metadata, use
+`--input telemetry.csv --metadata summary.json`. A JSON telemetry file can be
+an array of row objects or an object with `metadata` and `telemetry` keys.
+Rows accept the documented ROS column names or their lower-snake-case forms.
+The JSON/CSV/log artifacts must describe the same run; conflicting duplicate
+ticks, missing declared artifacts, and non-increasing sample order are rejected.
+Gaps between controller ticks produce a failed validation report.
+When copying artifacts out of Docker, keep the referenced files next to the
+summary so the original container paths can be resolved locally.
+
+Outputs are `gate1_validation_report.md` and four PNG/PDF pairs:
+`trajectory`, `safety_margin`, `controller_modes`, and `solver_timing`.
+The report includes run configuration, margin violation samples/episodes,
+controller shares/transitions/interventions, tracking RMSE, and mean/P95/max
+solver timing for both all ticks and active filter/backup ticks. It leaves
+human sign-off pending. Time is recorded `time_s`, or `Tick * dt` using an
+explicit `--dt`, metadata, or the documented `0.05 s` fallback.
+
+`MinMargin` is the **nominal LQR predicted rollout** margin, not a physical
+contact measurement. The strict report gate rejects any sample below zero
+(or a higher configured `configured_min_margin_m`). It also preserves upstream
+parse, runtime, and controller failures even when the available rows look safe.
+Actual collision counts are shown only for explicit metadata counts or optional
+`collision` boolean / cumulative `collision_count` columns; otherwise they are
+marked **not recorded**, rather than inferred from the rollout margin.
+
+Exit codes are `0` for passing available checks, `1` for a failed validation
+with figures/report retained, and `2` for missing/malformed inputs or artifact
+I/O errors. `--solver-time-limit-ms` adds an overrun count; timing overruns are
+reported separately because the controller may use BACKUP. Matplotlib uses
+`Agg` even when a GUI backend is configured, so no ROS installation, display,
+or simulator is needed to post-process an existing run.

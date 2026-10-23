@@ -15,6 +15,7 @@ from ..models.augmented_dynamics import (
     AugmentedDifferentialDriveModel,
     DynamicModelParams,
 )
+from ..models.footprint import DEFAULT_CONTROLLER_ROBOT_RADIUS
 
 
 @dataclass
@@ -93,7 +94,7 @@ class BackupSafetyController:
         tau_v: float = 0.10,
         tau_omega: float = 0.10,
         horizon: int = 10,
-        robot_radius: float = 0.20,
+        robot_radius: float = DEFAULT_CONTROLLER_ROBOT_RADIUS,
     ) -> BackupCommand:
         """Choose an emergency command by short-horizon clearance rollout.
 

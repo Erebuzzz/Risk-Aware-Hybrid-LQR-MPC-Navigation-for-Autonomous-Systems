@@ -236,6 +236,28 @@ but hardware deployment is out of scope. Results are diagnostic until the
 footprint contract, actuator calibration, controlled state-gap grid, and
 held-out parameter range are all validated.
 
+The footprint contracts are explicit: the ROS controller uses its TurtleBot3
+profile (`0.105 m`), while the custom MuJoCo box uses the circumscribed radius
+of its declared `0.20 m x 0.14 m` half-extents (`0.2441 m`). The two values are
+not interchangeable.
+
+### Research gate status: October 23, 2026
+
+**Gate 0 research acceptance is incomplete.** Environment checks and the
+768-case primary / 162-case held-out analytical grids are complete. The
+controlled physical sweep, actuator-model mismatch calibration, and secondary
+clustered collision analysis remain open. The MuJoCo prefix is diagnostic
+evidence of model mismatch, not validation of a correction or backup policy.
+
+Provisional Docker Build Cloud CI and ROS 2 experiment tooling is described in
+`docs/docker_build_cloud.md` and `docs/option_b_experiment_guide.md`. It captures
+logs and generates PNG/PDF figures plus a human-validation report. Successful
+container execution and human review remain pending. `MinMargin` measures the
+nominal LQR rollout, so it must not be interpreted as measured collision
+clearance. The current ROS harness does not record physical collision counts.
+The CI Cloud builder is configured through the repository secrets
+`DOCKER_USER` and `DOCKER_PAT`, using the `ros2-jazzy` builder.
+
 ## Working-tree hygiene
 
 Do not commit:

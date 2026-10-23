@@ -65,6 +65,7 @@ class AdaptiveSafetyFilterNode(Node):
         self.declare_parameter("horizon", 10)
         self.declare_parameter("terminal_horizon", 5)
         self.declare_parameter("d_safe", 0.30)
+        self.declare_parameter("robot_radius", 0.105)
         self.declare_parameter("q_x", 30.0)
         self.declare_parameter("q_y", 30.0)
         self.declare_parameter("q_theta", 5.0)
@@ -82,6 +83,7 @@ class AdaptiveSafetyFilterNode(Node):
         self.horizon = int(self.get_parameter("horizon").value)
         terminal_horizon = int(self.get_parameter("terminal_horizon").value)
         self.d_safe = float(self.get_parameter("d_safe").value)
+        robot_radius = float(self.get_parameter("robot_radius").value)
 
         q_diag = [
             float(self.get_parameter("q_x").value),
@@ -99,6 +101,7 @@ class AdaptiveSafetyFilterNode(Node):
             Q_diag=q_diag,
             R_diag=r_diag,
             d_safe=self.d_safe,
+            robot_radius=robot_radius,
             dt=self.dt,
             v_max=self.v_max,
             omega_max=self.omega_max,

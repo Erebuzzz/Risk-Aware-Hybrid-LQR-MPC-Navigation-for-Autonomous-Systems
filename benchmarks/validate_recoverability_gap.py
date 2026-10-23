@@ -40,9 +40,12 @@ class RecoverabilityCase:
     dt: float
     rho_v: float
     u0: float
+    state_only_distance: float
     continuous_distance: float
     discrete_distance: float
+    state_only_minus_continuous: float
     discrete_minus_continuous: float
+    state_only_safe: bool
     continuous_safe: bool
     discrete_safe: bool
 
@@ -86,6 +89,19 @@ def continuous_minimum_travel(v0: float, u0: float, rho_v: float, tau_v: float) 
     if tau_v <= 0.0:
         raise ValueError("tau_v must be positive")
     return float(tau_v * v0 + (u0 * u0) / (2.0 * rho_v))
+
+
+def state_only_minimum_travel(v0: float, tau_v: float) -> float:
+    """Return the stop distance available from state velocity alone.
+
+    This deliberately ignores the currently latched command. It is the
+    state-only comparator for the controlled grid, not the rate-aware bound.
+    """
+    if not math.isfinite(v0) or not math.isfinite(tau_v):
+        raise ValueError("state-only recoverability parameters must be finite")
+    if v0 < 0.0 or tau_v <= 0.0:
+        raise ValueError("v0 must be nonnegative and tau_v must be positive")
+    return float(tau_v * v0)
 
 
 def discrete_stopping_distance(
@@ -211,6 +227,7 @@ def evaluate_case(
         raise ValueError("obstacle_distance must be nonnegative")
     u0 = v0 + command_gap
     rho_v = delta_u / dt
+    state_only = state_only_minimum_travel(v0, tau_v)
     continuous = continuous_minimum_travel(v0, u0, rho_v, tau_v)
     discrete = discrete_stopping_distance(v0, u0, delta_u, dt, tau_v)
     return RecoverabilityCase(
@@ -222,9 +239,12 @@ def evaluate_case(
         dt=float(dt),
         rho_v=float(rho_v),
         u0=float(u0),
+        state_only_distance=state_only,
         continuous_distance=continuous,
         discrete_distance=discrete,
+        state_only_minus_continuous=float(state_only - continuous),
         discrete_minus_continuous=float(discrete - continuous),
+        state_only_safe=bool(obstacle_distance >= state_only),
         continuous_safe=bool(obstacle_distance >= continuous),
         discrete_safe=bool(obstacle_distance >= discrete),
     )
@@ -274,6 +294,7 @@ def summarize(cases: Iterable[RecoverabilityCase]) -> dict[str, float | int]:
     if not rows:
         raise ValueError("at least one recoverability case is required")
     corrections = [row.discrete_minus_continuous for row in rows]
+    state_only_corrections = [row.state_only_minus_continuous for row in rows]
     return {
         "case_count": len(rows),
         "continuous_underprediction_count": sum(value > 1.0e-12 for value in corrections),
@@ -281,6 +302,16 @@ def summarize(cases: Iterable[RecoverabilityCase]) -> dict[str, float | int]:
         "maximum_discrete_minus_continuous": float(max(corrections)),
         "minimum_discrete_minus_continuous": float(min(corrections)),
         "mean_discrete_minus_continuous": float(sum(corrections) / len(corrections)),
+        "state_only_underprediction_count": sum(
+            value < -1.0e-12 for value in state_only_corrections
+        ),
+        "maximum_continuous_minus_state_only": float(-min(state_only_corrections)),
+        "state_only_vs_continuous_disagreement_count": sum(
+            row.state_only_safe != row.continuous_safe for row in rows
+        ),
+        "state_only_vs_discrete_disagreement_count": sum(
+            row.state_only_safe != row.discrete_safe for row in rows
+        ),
         "safe_boundary_disagreement_count": sum(
             row.continuous_safe != row.discrete_safe for row in rows
         ),
@@ -332,12 +363,18 @@ def compare_with_mujoco(
 def _write_outputs(
     output: Path,
     cases: list[RecoverabilityCase],
+    split: str,
+    dt: float,
     mujoco_comparisons: list[dict[str, float | bool]] | None = None,
 ) -> None:
     output.mkdir(parents=True, exist_ok=True)
     rows = [asdict(case) for case in cases]
     summary = summarize(cases)
-    payload: dict[str, object] = {"summary": summary, "cases": rows}
+    payload: dict[str, object] = {
+        "metadata": {"split": split, "dt": dt},
+        "summary": summary,
+        "cases": rows,
+    }
     if mujoco_comparisons is not None:
         payload["mujoco_comparisons"] = mujoco_comparisons
     (output / "recoverability_gap_validation.json").write_text(
@@ -366,6 +403,12 @@ def build_parser() -> argparse.ArgumentParser:
         description="Validate continuous and discrete actuator-lag recoverability bounds"
     )
     parser.add_argument("--dt", type=float, default=0.05)
+    parser.add_argument(
+        "--split",
+        choices=("primary", "held-out"),
+        default="primary",
+        help="Use the fixed primary or held-out parameter grid.",
+    )
     parser.add_argument("--v0-values", default="0.25,0.75,1.5,2.5")
     parser.add_argument("--command-gap-values", default="0.0,0.5,1.0,1.5")
     parser.add_argument("--obstacle-distance-values", default="0.1,0.5,1.0,1.5")
@@ -388,12 +431,28 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
+    grid = {
+        "primary": {
+            "v0": args.v0_values,
+            "gap": args.command_gap_values,
+            "distance": args.obstacle_distance_values,
+            "tau": args.tau_values,
+            "delta": args.delta_u_values,
+        },
+        "held-out": {
+            "v0": "0.4,1.1,2.0",
+            "gap": "0.25,0.75,1.25",
+            "distance": "0.25,0.75,1.25",
+            "tau": "0.08,0.13,0.18",
+            "delta": "0.075,0.15",
+        },
+    }[args.split]
     cases = run_grid(
-        v0_values=_parse_values(args.v0_values),
-        command_gap_values=_parse_values(args.command_gap_values),
-        obstacle_distance_values=_parse_values(args.obstacle_distance_values),
-        tau_values=_parse_values(args.tau_values),
-        delta_u_values=_parse_values(args.delta_u_values),
+        v0_values=_parse_values(grid["v0"]),
+        command_gap_values=_parse_values(grid["gap"]),
+        obstacle_distance_values=_parse_values(grid["distance"]),
+        tau_values=_parse_values(grid["tau"]),
+        delta_u_values=_parse_values(grid["delta"]),
         dt=args.dt,
     )
     mujoco_comparisons = (
@@ -405,7 +464,7 @@ def main(argv: list[str] | None = None) -> None:
         if args.include_mujoco
         else None
     )
-    _write_outputs(args.output, cases, mujoco_comparisons)
+    _write_outputs(args.output, cases, args.split, args.dt, mujoco_comparisons)
     print(json.dumps(summarize(cases), indent=2))
     if mujoco_comparisons is not None:
         print(json.dumps({"mujoco_comparisons": mujoco_comparisons}, indent=2))

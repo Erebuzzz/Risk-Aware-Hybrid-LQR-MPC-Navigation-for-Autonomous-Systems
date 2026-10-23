@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -50,23 +51,78 @@ jobs:
   ros2:
     name: ROS 2 Jazzy container checks
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # Optional Docker Build Cloud configuration. The repository currently
+      # stores both values as secrets. When they are unavailable, for example
+      # on pull requests from forks, the job uses a local builder.
+      DOCKER_USER: ${{ secrets.DOCKER_USER }}
+      ROS_IMAGE_JAZZY: risk-aware-hybrid:ci
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Validate Compose configuration
-        run: docker compose config
+        run: docker compose --profile '*' config --quiet
 
-      - name: Build ROS 2 image
-        run: docker build --build-arg ROS_DISTRO=jazzy -t risk-aware-hybrid:ci .
+      - name: Select Docker Build Cloud or local builder
+        id: builder-mode
+        shell: bash
+        env:
+          DOCKER_PAT: ${{ secrets.DOCKER_PAT }}
+        run: |
+          if [[ -n "${DOCKER_USER}" && -n "${DOCKER_PAT}" ]]; then
+            echo "cloud=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "cloud=false" >> "${GITHUB_OUTPUT}"
+          fi
 
-      - name: Build and test the ROS 2 workspace
-        run: >-
-          docker run --rm risk-aware-hybrid:ci
-          bash -lc
-          'source /opt/ros/jazzy/setup.bash
-          && source /ros2_ws/install/setup.bash
-          && /opt/venv/bin/python -c "import cvxpy; print(cvxpy.__version__)"
-          && /opt/venv/bin/colcon test --event-handlers console_direct+
-          && /opt/venv/bin/colcon test-result --verbose
-          && ros2 pkg list | grep -E "^(hybrid_controller|hybrid_nav)$"'
+      - name: Log in to Docker Hub for Build Cloud
+        if: steps.builder-mode.outputs.cloud == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PAT }}
+
+      - name: Set up Docker Buildx Build Cloud builder
+        id: cloud-builder
+        if: steps.builder-mode.outputs.cloud == 'true'
+        uses: docker/setup-buildx-action@v4
+        with:
+          version: latest
+          driver: cloud
+          endpoint: ${{ secrets.DOCKER_USER }}/ros2-jazzy
+
+      - name: Set up local Buildx fallback
+        id: local-builder
+        if: steps.builder-mode.outputs.cloud != 'true'
+        uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker-container
+
+      - name: Build ROS 2 Jazzy image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          builder: ${{ steps.cloud-builder.outputs.name || steps.local-builder.outputs.name }}
+          build-args: |
+            ROS_DISTRO=jazzy
+          platforms: linux/amd64
+          tags: risk-aware-hybrid:ci
+          load: true
+
+      - name: Test the ROS 2 workspace
+        run: docker compose --profile ci run --rm --no-deps --no-build --pull never -T ci
+
+      - name: Run the headless Gate 1 experiment and report
+        timeout-minutes: 5
+        run: docker compose --profile experiment run --rm --no-deps --no-build --pull never -T experiment
+
+      - name: Retain Gate 1 evidence, including failed runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate1-ros2-jazzy
+          path: Output/Gate1/
+          if-no-files-found: warn

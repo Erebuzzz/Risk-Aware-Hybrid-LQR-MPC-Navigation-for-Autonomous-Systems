@@ -86,6 +86,24 @@ def test_eso_lateral_slip_converges_within_fifteen_steps():
     assert np.isclose(estimate[1], true_lateral_slip, rtol=0.10, atol=1e-4)
 
 
+def test_eso_pose_adapter_returns_updated_lateral_estimate():
+    observer = ExtendedStateObserver3D(ESOConfig(dt=0.05, beta=0.5))
+    observer.update_from_pose_and_velocity(
+        np.array([0.0, 0.0, 0.0]),
+        np.array([0.0, 0.0]),
+        np.array([0.4, 0.0]),
+        np.array([0.4, 0.0]),
+    )
+    estimate = observer.update_from_pose_and_velocity(
+        np.array([0.02, 0.01, 0.0]),
+        np.array([0.4, 0.2]),
+        np.array([0.4, 0.0]),
+        np.array([0.4, 0.0]),
+    )
+    assert np.allclose(estimate, observer.estimate)
+    assert estimate[1] > 0.0
+
+
 def test_spatial_progress_does_not_run_away_when_position_is_frozen():
     reference = SpatialFigure8Reference(amplitude=2.0)
     starting_progress = 1.25

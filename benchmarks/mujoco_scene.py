@@ -8,6 +8,12 @@ from typing import Sequence
 import mujoco
 import numpy as np
 
+from hybrid_controller.models.footprint import (
+    MUJOCO_ROBOT_FOOTPRINT,
+    MUJOCO_ROBOT_HALF_LENGTH,
+    MUJOCO_ROBOT_HALF_WIDTH,
+)
+
 
 @dataclass(frozen=True)
 class MuJoCoPlantConfig:
@@ -17,12 +23,18 @@ class MuJoCoPlantConfig:
     tau_omega: float = 0.10
     force_gain: float = 9.0
     torque_gain: float = 4.0
-    robot_radius: float = 0.20
+    robot_radius: float = MUJOCO_ROBOT_FOOTPRINT.radius
+    robot_half_length: float = MUJOCO_ROBOT_HALF_LENGTH
+    robot_half_width: float = MUJOCO_ROBOT_HALF_WIDTH
     slip_gain: float = 0.0
 
 
 def build_scene_xml(
-    obstacles: Sequence[dict[str, float]], friction: float, physics_dt: float = 0.002
+    obstacles: Sequence[dict[str, float]],
+    friction: float,
+    physics_dt: float = 0.002,
+    robot_half_length: float = MUJOCO_ROBOT_HALF_LENGTH,
+    robot_half_width: float = MUJOCO_ROBOT_HALF_WIDTH,
 ) -> str:
     obstacle_geoms = []
     for index, obstacle in enumerate(obstacles):
@@ -43,7 +55,7 @@ def build_scene_xml(
     {''.join(obstacle_geoms)}
     <body name="robot" pos="0 0 0.16">
       <freejoint/>
-      <geom name="robot_body" type="box" size="0.20 0.14 0.06" mass="2.0" friction="{friction} 0.01 0.001" rgba="0.1 0.3 0.8 1"/>
+      <geom name="robot_body" type="box" size="{robot_half_length} {robot_half_width} 0.06" mass="2.0" friction="{friction} 0.01 0.001" rgba="0.1 0.3 0.8 1"/>
     </body>
   </worldbody>
 </mujoco>
@@ -60,7 +72,13 @@ class MuJoCoPlant:
         config: MuJoCoPlantConfig | None = None,
     ) -> None:
         self.config = config or MuJoCoPlantConfig()
-        xml = build_scene_xml(obstacles, friction, self.config.physics_dt)
+        xml = build_scene_xml(
+            obstacles,
+            friction,
+            self.config.physics_dt,
+            self.config.robot_half_length,
+            self.config.robot_half_width,
+        )
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.model.opt.timestep = self.config.physics_dt
         self.data = mujoco.MjData(self.model)

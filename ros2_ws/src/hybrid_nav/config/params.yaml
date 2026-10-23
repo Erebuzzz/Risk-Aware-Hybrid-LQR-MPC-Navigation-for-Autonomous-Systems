@@ -96,6 +96,7 @@ adaptive_safety_filter_node:
     horizon: 10
     terminal_horizon: 5
     d_safe: 0.30
+    robot_radius: 0.105
     q_x: 30.0
     q_y: 30.0
     q_theta: 5.0

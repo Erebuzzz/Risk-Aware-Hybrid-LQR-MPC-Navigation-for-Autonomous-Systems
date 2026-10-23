@@ -15,6 +15,7 @@ import numpy as np
 from scipy.linalg import solve_discrete_are
 
 from ..models.augmented_dynamics import AugmentedDifferentialDriveModel
+from ..models.footprint import DEFAULT_CONTROLLER_ROBOT_RADIUS
 from .cvar_gate import CVaRRiskGate, ObstacleKinematics
 from .rust_core import RustHorizonQpWorkspace
 
@@ -27,7 +28,7 @@ class SafetyFilterConfig:
     max_obstacles: int = 8
     dt: float = 0.05
     d_safe: float = 0.30
-    robot_radius: float = 0.105
+    robot_radius: float = DEFAULT_CONTROLLER_ROBOT_RADIUS
     alpha: float = 0.95
     v_min: float = -1.0
     v_max: float = 1.0

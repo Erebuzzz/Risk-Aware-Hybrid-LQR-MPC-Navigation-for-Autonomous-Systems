@@ -1,7 +1,8 @@
+# syntax=docker/dockerfile:1
 # Risk-aware hybrid LQR-MPC navigation image.
 #
 # Build:
-#   docker build --build-arg ROS_DISTRO=jazzy -t risk-aware-hybrid:jazzy .
+#   make docker-build
 
 ARG ROS_DISTRO=jazzy
 FROM osrf/ros:${ROS_DISTRO}-desktop-full
@@ -47,9 +48,15 @@ RUN python -m pip install --no-cache-dir -e src/hybrid_controller
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
     /opt/venv/bin/colcon build --symlink-install --event-handlers console_direct+
 
-# Entrypoint
+# Entrypoint and the bounded, headless experiment command used by Compose/CI.
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
+COPY scripts/docker_ros2_checks.sh /usr/local/bin/docker-ros2-checks
+COPY scripts/docker_headless_experiment.sh /usr/local/bin/docker-headless-experiment
+COPY benchmarks/generate_ros_validation_report.py /opt/gate1/generate_ros_validation_report.py
+RUN sed -i 's/\r$//' /docker-entrypoint.sh /usr/local/bin/docker-ros2-checks \
+        /usr/local/bin/docker-headless-experiment && \
+    chmod +x /docker-entrypoint.sh /usr/local/bin/docker-ros2-checks \
+        /usr/local/bin/docker-headless-experiment
 ENTRYPOINT ["/bin/bash", "/docker-entrypoint.sh"]
 
 # Default to an interactive shell. Compose and CI provide explicit commands.

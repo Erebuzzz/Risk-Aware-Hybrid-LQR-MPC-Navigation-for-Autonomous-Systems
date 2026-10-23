@@ -1,8 +1,14 @@
-.PHONY: help setup test compile recoverability docker-build docker-test ros2-build ros2-test clean
+.PHONY: help setup test compile recoverability docker-build docker-test docker-experiment ros2-build ros2-test clean
 
 SHELL := /bin/bash
 PYTHON ?= python
 ROS_DISTRO ?= jazzy
+ROS_IMAGE_JAZZY ?= risk-aware-hybrid:jazzy
+EXPERIMENT_DURATION_SECONDS ?= 30
+
+# Set BUILDX_BUILDER to a connected Docker Build Cloud builder for a remote
+# build. Leave it unset to use the local/default Buildx builder.
+BUILDX_BUILDER_ARGS := $(if $(strip $(BUILDX_BUILDER)),--builder "$(BUILDX_BUILDER)",)
 
 help:
 	@echo "Available targets:"
@@ -12,6 +18,7 @@ help:
 	@echo "  make recoverability    Run the deterministic Stage A grid"
 	@echo "  make docker-build      Build the ROS 2 Jazzy image"
 	@echo "  make docker-test       Run the containerized ROS 2 checks"
+	@echo "  make docker-experiment Run the bounded headless ROS 2 experiment"
 	@echo "  make ros2-build        Build the ROS 2 workspace on the host"
 	@echo "  make ros2-test         Test the ROS 2 workspace on the host"
 	@echo "  make clean             Remove ROS 2 build artifacts"
@@ -31,10 +38,19 @@ recoverability:
 		--output Output/Plots/Paper/recoverability_gap_validation
 
 docker-build:
-	docker compose build jazzy
+	docker buildx build $(BUILDX_BUILDER_ARGS) \
+		--build-arg ROS_DISTRO=jazzy \
+		--tag "$(ROS_IMAGE_JAZZY)" \
+		--load .
 
-docker-test:
-	docker compose --profile ci run --rm ci
+docker-test: docker-build
+	ROS_IMAGE_JAZZY="$(ROS_IMAGE_JAZZY)" \
+		docker compose --profile ci run --rm --no-deps --no-build --pull never -T ci
+
+docker-experiment: docker-build
+	ROS_IMAGE_JAZZY="$(ROS_IMAGE_JAZZY)" \
+	EXPERIMENT_DURATION_SECONDS="$(EXPERIMENT_DURATION_SECONDS)" \
+		docker compose --profile experiment run --rm --no-deps --no-build --pull never -T experiment
 
 ros2-build:
 	source /opt/ros/$(ROS_DISTRO)/setup.bash && \

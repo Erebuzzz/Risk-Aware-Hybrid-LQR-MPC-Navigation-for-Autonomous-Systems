@@ -31,6 +31,7 @@ from ..models.augmented_dynamics import (
     AugmentedDifferentialDriveModel,
     DynamicModelParams,
 )
+from ..models.footprint import DEFAULT_CONTROLLER_ROBOT_RADIUS
 
 
 @dataclass
@@ -79,7 +80,7 @@ class AdaptiveMPCSafetyFilter:
         omega_max: float = 2.84,
         adaptation_gamma: float = 0.005,
         mpc_time_limit_ms: float = 250.0,
-        robot_radius: float = 0.105,
+        robot_radius: float = DEFAULT_CONTROLLER_ROBOT_RADIUS,
         augmented_backend: Optional[str] = None,
         augmented_horizon: int = 5,
         augmented_max_obstacles: int = 8,

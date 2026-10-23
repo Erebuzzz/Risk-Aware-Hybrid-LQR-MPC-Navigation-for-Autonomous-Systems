@@ -21,6 +21,7 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -32,8 +33,8 @@ def generate_launch_description():
     params_yaml = os.path.join(hybrid_nav_dir, "config", "params.yaml")
 
     use_sim_time = LaunchConfiguration("use_sim_time", default="true")
-    use_rviz = LaunchConfiguration("use_rviz", default="true")
-    use_gz_gui = LaunchConfiguration("use_gz_gui", default="true")
+    use_rviz = LaunchConfiguration("use_rviz", default="false")
+    use_gz_gui = LaunchConfiguration("use_gz_gui", default="false")
     x_pose = LaunchConfiguration("x_pose", default="0.0")
     y_pose = LaunchConfiguration("y_pose", default="0.0")
     use_actuation_mismatch = LaunchConfiguration(
@@ -41,6 +42,7 @@ def generate_launch_description():
     )
     obstacle_scenario = LaunchConfiguration("obstacle_scenario", default="crossing")
     obstacle_format = LaunchConfiguration("obstacle_format", default="quintuple")
+    experiment_seed = LaunchConfiguration("experiment_seed", default="7")
 
     world = os.path.join(hybrid_nav_dir, "worlds", "hybrid_obstacle_world.sdf")
 
@@ -54,7 +56,7 @@ def generate_launch_description():
             os.path.join(ros_gz_sim_dir, "launch", "gz_sim.launch.py")
         ),
         launch_arguments={
-            "gz_args": ["-r -s -v1 ", world],
+            "gz_args": ["-r -s -v1 --seed ", experiment_seed, " ", world],
             "on_exit_shutdown": "true",
         }.items(),
     )
@@ -117,7 +119,10 @@ def generate_launch_description():
         executable="command_distortion_node",
         name="command_distortion_node",
         output="screen",
-        parameters=[params_yaml, {"enabled": use_actuation_mismatch}],
+        parameters=[params_yaml, {
+            "enabled": use_actuation_mismatch,
+            "seed": ParameterValue(experiment_seed, value_type=int),
+        }],
     )
 
     dynamic_obstacles = Node(
@@ -147,8 +152,8 @@ def generate_launch_description():
 
     ld = LaunchDescription()
     ld.add_action(DeclareLaunchArgument("use_sim_time", default_value="true"))
-    ld.add_action(DeclareLaunchArgument("use_rviz", default_value="true"))
-    ld.add_action(DeclareLaunchArgument("use_gz_gui", default_value="true"))
+    ld.add_action(DeclareLaunchArgument("use_rviz", default_value="false"))
+    ld.add_action(DeclareLaunchArgument("use_gz_gui", default_value="false"))
     ld.add_action(DeclareLaunchArgument("x_pose", default_value="0.0"))
     ld.add_action(DeclareLaunchArgument("y_pose", default_value="0.0"))
     ld.add_action(
@@ -156,6 +161,7 @@ def generate_launch_description():
     )
     ld.add_action(DeclareLaunchArgument("obstacle_scenario", default_value="crossing"))
     ld.add_action(DeclareLaunchArgument("obstacle_format", default_value="quintuple"))
+    ld.add_action(DeclareLaunchArgument("experiment_seed", default_value="7"))
 
     ld.add_action(set_gz_model_path)
     ld.add_action(gz_server)

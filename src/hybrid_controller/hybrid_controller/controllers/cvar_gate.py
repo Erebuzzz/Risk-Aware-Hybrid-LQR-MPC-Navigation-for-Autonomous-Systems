@@ -9,6 +9,8 @@ from typing import Any, Sequence
 import numpy as np
 from scipy.special import ndtri
 
+from ..models.footprint import DEFAULT_CONTROLLER_ROBOT_RADIUS
+
 
 @dataclass(frozen=True)
 class ObstacleKinematics:
@@ -106,7 +108,7 @@ class CVaRRiskGate:
         self,
         alpha: float = 0.95,
         d_safe: float = 0.30,
-        robot_radius: float = 0.105,
+        robot_radius: float = DEFAULT_CONTROLLER_ROBOT_RADIUS,
         dt: float = 0.05,
     ) -> None:
         self.alpha = float(alpha)

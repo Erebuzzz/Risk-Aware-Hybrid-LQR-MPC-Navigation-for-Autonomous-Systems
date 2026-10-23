@@ -10,6 +10,7 @@ from benchmarks.validate_recoverability_gap import (
     discrete_stopping_trace,
     evaluate_case,
     run_grid,
+    state_only_minimum_travel,
     summarize,
 )
 from hybrid_controller.models.augmented_dynamics import (
@@ -50,7 +51,7 @@ def test_recoverability_grid_reports_safe_boundary_disagreement():
     cases = run_grid(
         v0_values=[0.5],
         command_gap_values=[0.5],
-        obstacle_distance_values=[0.7, 0.9],
+        obstacle_distance_values=[0.1, 0.2],
         tau_values=[0.10],
         delta_u_values=[0.10],
         dt=0.05,
@@ -60,6 +61,21 @@ def test_recoverability_grid_reports_safe_boundary_disagreement():
     summary = summarize(cases)
     assert summary["case_count"] == 2
     assert summary["continuous_underprediction_count"] == 2
+    assert summary["state_only_vs_continuous_disagreement_count"] == 2
+
+
+def test_state_only_bound_ignores_latched_command_gap():
+    assert np.isclose(state_only_minimum_travel(1.0, 0.1), 0.1)
+    case = evaluate_case(
+        v0=1.0,
+        command_gap=1.0,
+        obstacle_distance=0.2,
+        tau_v=0.1,
+        delta_u=0.1,
+        dt=0.05,
+    )
+    assert case.state_only_safe
+    assert not case.continuous_safe
 
 
 def test_evaluate_case_rejects_negative_command_gap():

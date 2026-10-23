@@ -41,6 +41,7 @@ setup(
             'dynamic_obstacle_publisher_node = hybrid_nav.nodes.dynamic_obstacle_publisher_node:main',
             'twist_relay_node = hybrid_nav.nodes.twist_relay_node:main',
             'async_mpc_controller_node = hybrid_nav.nodes.async_mpc_controller_node:main',
+            'gate1_experiment = hybrid_nav.gate1_experiment:main',
         ],
     },
 )

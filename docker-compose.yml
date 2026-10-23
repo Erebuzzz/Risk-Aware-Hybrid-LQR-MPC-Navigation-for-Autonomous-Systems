@@ -5,15 +5,27 @@
 #
 # ROS 2 workspace checks:
 #   docker compose --profile ci run --rm ci
+#
+# Bounded headless experiment, telemetry and report:
+#   make docker-experiment
+#
+# Buildx builder selection is intentionally external to this file. Leave
+# BUILDX_BUILDER unset for the normal local builder, or set it to a connected
+# Docker Build Cloud builder (for example, cloud-ORG-default) before building.
+
+x-ros-build: &ros-build
+  context: .
+  dockerfile: Dockerfile
 
 services:
   jazzy:
+    image: ${ROS_IMAGE_JAZZY:-risk-aware-hybrid:jazzy}
     build:
-      context: .
+      <<: *ros-build
       args:
         ROS_DISTRO: jazzy
     environment:
-      - TURTLEBOT3_MODEL=burger
+      TURTLEBOT3_MODEL: burger
     network_mode: host
     stdin_open: true
     tty: true
@@ -22,12 +34,13 @@ services:
       use_rviz:=false use_gz_gui:=false
 
   humble:
+    image: ${ROS_IMAGE_HUMBLE:-risk-aware-hybrid:humble}
     build:
-      context: .
+      <<: *ros-build
       args:
         ROS_DISTRO: humble
     environment:
-      - TURTLEBOT3_MODEL=burger
+      TURTLEBOT3_MODEL: burger
     network_mode: host
     stdin_open: true
     tty: true
@@ -37,19 +50,40 @@ services:
       ros2 launch hybrid_nav turtlebot3_hybrid.launch.py use_rviz:=false use_gz_gui:=false
 
   ci:
+    image: ${ROS_IMAGE_JAZZY:-risk-aware-hybrid:jazzy}
     build:
-      context: .
+      <<: *ros-build
       args:
         ROS_DISTRO: jazzy
     environment:
-      - TURTLEBOT3_MODEL=burger
-      - ROS_LOCALHOST_ONLY=1
-      - ROS_DOMAIN_ID=42
+      TURTLEBOT3_MODEL: burger
+      ROS_LOCALHOST_ONLY: "1"
+      ROS_DOMAIN_ID: "42"
+      PYTHONHASHSEED: "0"
+      RCUTILS_COLORIZED_OUTPUT: "0"
     profiles:
       - ci
-    command: >-
-      bash -lc
-      "source /opt/ros/jazzy/setup.bash &&
-      source /ros2_ws/install/setup.bash &&
-      /opt/venv/bin/colcon test --event-handlers console_direct+ &&
-      /opt/venv/bin/colcon test-result --verbose"
+    command: ["docker-ros2-checks"]
+
+  experiment:
+    image: ${ROS_IMAGE_JAZZY:-risk-aware-hybrid:jazzy}
+    build:
+      <<: *ros-build
+      args:
+        ROS_DISTRO: jazzy
+    environment:
+      TURTLEBOT3_MODEL: burger
+      ROS_LOCALHOST_ONLY: "1"
+      ROS_DOMAIN_ID: "42"
+      PYTHONHASHSEED: "0"
+      RCUTILS_COLORIZED_OUTPUT: "0"
+      EXPERIMENT_DURATION_SECONDS: ${EXPERIMENT_DURATION_SECONDS:-30}
+      ROS_LOG_DIR: /ros2_ws/Output/ROS
+      MPLBACKEND: Agg
+    volumes:
+      - ./Output:/ros2_ws/Output
+    init: true
+    stop_grace_period: 30s
+    profiles:
+      - experiment
+    command: ["docker-headless-experiment"]
