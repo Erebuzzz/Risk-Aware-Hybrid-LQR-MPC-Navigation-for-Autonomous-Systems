@@ -137,6 +137,22 @@ The script writes JSON and CSV records. It reports discrete correction and
 safe-boundary disagreement instead of hiding the difference in a fitted safety
 constant.
 
+Run the full controlled MuJoCo plant sweep against the same frozen primary and
+held-out ranges with:
+
+```bash
+python -m benchmarks.run_controlled_recoverability_sweep --split primary
+python -m benchmarks.run_controlled_recoverability_sweep --split held-out
+```
+
+The sweep measures maximum forward travel at control-interval endpoints, then
+compares it with a virtual stopping budget. It requires sustained settling and
+rejects numerical resets or invalid states. These are stopping-boundary proxies;
+the scene has no obstacle bodies and records no obstacle collisions. Held-out
+cases are evaluation-only; no model correction or threshold is derived from
+them. Use a new `--output` directory for each repeat. See
+`docs/controlled_recoverability.md` for the frozen protocol, results, and limits.
+
 ## ROS 2 Jazzy with Docker
 
 Docker is the supported ROS 2 setup. The image builds both active packages:
@@ -228,6 +244,9 @@ time constants, and fallback state.
 - `docs/Adaptive_MPC_Theory.md`: current mathematical formulation.
 - `docs/formal_proofs.md`: formal proof drafts and their assumptions.
 - `docs/REFERENCES.md`: project bibliography.
+- `docs/controlled_recoverability.md`: controlled stopping protocol and measured results.
+- `docs/mujoco_calibration.md`: synthetic identification and numerical-validity checks.
+- `docs/collision_cluster_analysis.md`: recorded outcomes and separate boundary proxies.
 - `benchmarks/README.md`: benchmark-specific commands and output schema.
 - `report/report.tex`: historical implementation and evaluation report.
 
@@ -241,13 +260,19 @@ profile (`0.105 m`), while the custom MuJoCo box uses the circumscribed radius
 of its declared `0.20 m x 0.14 m` half-extents (`0.2441 m`). The two values are
 not interchangeable.
 
-### Research gate status: October 23, 2026
+### Research gate status: October 24, 2026
 
-**Gate 0 research acceptance is incomplete.** Environment checks and the
-768-case primary / 162-case held-out analytical grids are complete. The
-controlled physical sweep, actuator-model mismatch calibration, and secondary
-clustered collision analysis remain open. The MuJoCo prefix is diagnostic
-evidence of model mismatch, not validation of a correction or backup policy.
+**Gate 0 research acceptance is incomplete.** Environment checks, the
+768-case primary / 162-case held-out analytical grids, the deterministic
+controlled stopping sweep, synthetic identification diagnostics, and clustered
+reporting are available. All 768 primary and 162 held-out stopping cases completed
+with numerical-validity guards enabled. The discrete-model boundary disagreed
+with the measured proxy in 264 primary and 83 held-out cases. Simulator-model
+mismatch calibration, validated sampled-data corrections, obstacle-contact
+evaluation, and the angular-channel plant gate remain open. Recovering known
+parameters from the same simulator does not calibrate the reduced controller
+model against the plant. These results do not validate a safety correction or
+backup policy.
 
 Provisional Docker Build Cloud CI and ROS 2 experiment tooling is described in
 `docs/docker_build_cloud.md` and `docs/option_b_experiment_guide.md`. It captures

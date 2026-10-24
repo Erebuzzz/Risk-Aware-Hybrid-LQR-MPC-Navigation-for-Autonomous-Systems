@@ -129,6 +129,52 @@ velocity, then the first-order actuator lag is updated. Any disagreement between
 the continuous and discrete predictions is reported rather than hidden in a
 tuned correction factor.
 
+## Controlled plant-level recoverability sweep
+
+The analytical grid is followed by a deterministic MuJoCo plant sweep using the
+same command staircase and the fixed plant contract (`dt=0.05`, physics step
+`0.002`, friction `1.0`, zero slip, and the MuJoCo footprint). Run the complete
+primary and held-out splits separately:
+
+```bash
+python -m benchmarks.run_controlled_recoverability_sweep \
+  --split primary \
+  --output Output/Plots/Paper/controlled_recoverability_sweep
+
+python -m benchmarks.run_controlled_recoverability_sweep \
+  --split held-out \
+  --output Output/Plots/Paper/controlled_recoverability_sweep
+```
+
+The primary split is the frozen 768-case grid already used by the analytical
+validation. The held-out split is a separate immutable 162-case range:
+`v0={0.4,1.1,2.0}`, `command_gap={0.25,0.75,1.25}`,
+`obstacle_distance={0.25,0.75,1.25}`, `tau_v={0.08,0.13,0.18}`, and
+`delta_u={0.075,0.15}`. No correction, threshold, or plant parameter is fit
+from the held-out cases. `--max-cases` is available only for a deterministic
+preflight and must not be used as the primary evidence run.
+
+Each split writes a JSON report, a per-case CSV, and a logged-analysis sidecar.
+Use a new output directory for each repeat; existing sweep artifacts are never
+overwritten. `primary_metrics` contains controlled plant measurements and virtual
+stopping-boundary comparisons. `logged_analysis` is secondary descriptive
+analysis.
+
+The frozen measurement protocol samples maximum forward travel every `0.05 s`,
+then requires zero command and hidden actuator/body velocities below their
+`1e-4` tolerances for a `0.5 s` window. The scene contains only the robot and
+floor. `plant_proxy_safe` and `virtual_boundary_margin_m` therefore describe a
+virtual stopping budget, not an observed collision or physical clearance.
+Invalid or unsettled cases retain diagnostic records and null proxy outcomes;
+the CLI exits nonzero for unsupported measurements or source changes during a
+run. Reports retain source/configuration hashes and package versions.
+
+The full guarded run completed 768 primary and 162 held-out cases. Discrete
+boundary disagreement was `264/768` and `83/162`, respectively. Finite sampled
+travel is not an intersample or infinite-tail bound. See
+`docs/controlled_recoverability.md` for the protocol and results, and
+`docs/mujoco_calibration.md` for the separate synthetic identification checks.
+
 Trace files from `run_mujoco_monte_carlo.py` now include pre-action state,
 previous applied command, requested command, applied command, obstacle snapshot,
 pre-step and post-step clearance, actuator time constants, solver status, and
@@ -153,6 +199,28 @@ The two-sided angular-channel diagnostic is implemented in
 turn reachability after yaw lag and command slew, then selects the obstacle-
 appropriate side or the more reachable side on the centerline. It is a
 validation gate only and is not yet connected to the production safety status.
+
+## Clustered collision analysis
+
+The separate `analyze_collision_clusters` utility groups one outcome per trace
+or trial by decision-time pre-action risk and command gap when those values are
+available. It preserves recorded collision, non-collision, and unknown raw
+counts, with geometric and virtual-boundary violations in a separate proxy
+table. Floor contacts, nominal margins, and analytical safety labels do not
+establish obstacle collisions. Logged traces are explicitly reported as secondary
+exploratory evidence:
+
+```bash
+python -m benchmarks.analyze_collision_clusters \
+  --input Output/Plots/Paper/ablation_results/traces \
+  --output Output/Plots/Paper/ablation_results/collision_clusters
+```
+
+For a previously selected held-out artifact, pass `--split held-out`. That mode
+uses frozen cluster edges and does not tune thresholds from held-out outcomes.
+Use `--evidence primary_controlled` only for a deterministic controlled source;
+the report keeps this label separate from exploratory logged analysis. See
+`docs/collision_cluster_analysis.md` for input fields and output semantics.
 
 ## Gate 1 ROS 2 human-validation report
 

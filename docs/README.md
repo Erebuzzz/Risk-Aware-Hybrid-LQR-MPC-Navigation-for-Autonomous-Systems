@@ -8,6 +8,9 @@ The repository documentation is grouped by purpose.
 | [`formal_proofs.md`](formal_proofs.md) | Formal proof drafts and explicit assumptions |
 | [`option_b_experiment_guide.md`](option_b_experiment_guide.md) | ROS 2 and Gazebo experiment procedure |
 | [`REFERENCES.md`](REFERENCES.md) | Project bibliography |
+| [`mujoco_calibration.md`](mujoco_calibration.md) | Deterministic actuator and MuJoCo force-transmission diagnostic |
+| [`controlled_recoverability.md`](controlled_recoverability.md) | Frozen stopping-sweep protocol, primary/held-out results, and evidence limits |
+| [`collision_cluster_analysis.md`](collision_cluster_analysis.md) | Recorded collision outcomes, boundary proxies, and held-out provenance |
 | [`Project_Proposal.md`](Project_Proposal.md) | Original project motivation and proposal |
 | [`Adaptive_LQR_MPC_Safety_Filter_Proposal.tex`](Adaptive_LQR_MPC_Safety_Filter_Proposal.tex) | Publication-oriented safety-filter concept draft |
 | [`Research_Pathways_Proposal.tex`](Research_Pathways_Proposal.tex) | Research direction and experiment planning |

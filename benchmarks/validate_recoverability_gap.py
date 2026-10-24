@@ -29,6 +29,54 @@ from typing import Iterable
 
 
 @dataclass(frozen=True)
+class StoppingMeasurementProtocol:
+    """Sampling/termination rules fixed before the v2 sweep (2026-10-24).
+
+    Positions are sampled at reset and after each control interval, not at
+    every physics substep. A stop requires zero command and a consecutive
+    0.5-second window of quiet endpoint samples, including both endpoints.
+    All three translational and rotational body DOFs and both hidden actuator
+    states must be quiet. This is a finite sampled measurement, not an
+    infinite-horizon stopping guarantee or obstacle-contact measurement.
+    """
+
+    version: str = "sampled_peak_settled_v2"
+    physics_dt: float = 0.002
+    velocity_tolerance: float = 1.0e-4
+    angular_velocity_tolerance: float = 1.0e-4
+    settling_window_s: float = 0.5
+    max_steps: int = 20_000
+
+
+STOPPING_MEASUREMENT_PROTOCOL = StoppingMeasurementProtocol()
+
+
+@dataclass(frozen=True)
+class PlantStoppingMeasurement:
+    """One stopping experiment, including unsupported/invalid observations.
+
+    Partial distances on an unsupported run are retained for diagnosis only.
+    Only ``status == 'settled'`` supports a virtual-boundary comparison.
+    """
+
+    status: str
+    reason: str | None
+    maximum_sampled_forward_travel_m: float | None
+    terminal_forward_travel_m: float | None
+    maximum_travel_time_s: float | None
+    elapsed_time_s: float
+    attempted_steps: int
+    completed_steps: int
+    sample_count: int
+    quiet_samples: int
+    required_quiet_samples: int
+    terminal_body_linear_speed_m_s: float | None
+    terminal_body_angular_speed_rad_s: float | None
+    terminal_actuator_v_m_s: float | None
+    terminal_actuator_omega_rad_s: float | None
+
+
+@dataclass(frozen=True)
 class RecoverabilityCase:
     """One point in the deterministic recoverability grid."""
 
@@ -165,6 +213,159 @@ def discrete_stopping_trace(
     return commands, velocities
 
 
+def stopping_plant_config(dt: float, tau_v: float):
+    """Build the unchanged plant contract explicitly for repeatable reports."""
+    from benchmarks.mujoco_scene import MuJoCoPlantConfig
+    from hybrid_controller.models.footprint import (
+        MUJOCO_ROBOT_HALF_LENGTH,
+        MUJOCO_ROBOT_HALF_WIDTH,
+        MUJOCO_ROBOT_RADIUS,
+    )
+
+    return MuJoCoPlantConfig(
+        dt=dt,
+        physics_dt=STOPPING_MEASUREMENT_PROTOCOL.physics_dt,
+        tau_v=tau_v,
+        tau_omega=tau_v,
+        force_gain=9.0,
+        torque_gain=4.0,
+        robot_mass=2.0,
+        gravity_z=-9.81,
+        robot_radius=MUJOCO_ROBOT_RADIUS,
+        robot_half_length=MUJOCO_ROBOT_HALF_LENGTH,
+        robot_half_width=MUJOCO_ROBOT_HALF_WIDTH,
+        slip_gain=0.0,
+    )
+
+
+def measure_mujoco_stop(
+    v0: float,
+    u0: float,
+    delta_u: float,
+    dt: float,
+    tau_v: float,
+    *,
+    friction: float = 1.0,
+    velocity_tolerance: float = STOPPING_MEASUREMENT_PROTOCOL.velocity_tolerance,
+    angular_velocity_tolerance: float = STOPPING_MEASUREMENT_PROTOCOL.angular_velocity_tolerance,
+    settling_window_s: float = STOPPING_MEASUREMENT_PROTOCOL.settling_window_s,
+    max_steps: int = STOPPING_MEASUREMENT_PROTOCOL.max_steps,
+) -> PlantStoppingMeasurement:
+    """Measure maximum sampled forward travel until sustained settling.
+
+    The command remains ``max(0, u0 - k * delta_u)``. No obstacle is placed in
+    MuJoCo. Runtime failures, non-finite state, reset/time discontinuities, and
+    failure to settle produce unsupported results, never a safe distance.
+    MuJoCoPlant also checks numerical validity at each physics substep.
+    """
+
+    _validate_parameters(v0, u0, delta_u, dt, tau_v)
+    for name, value in (
+        ("friction", friction),
+        ("velocity_tolerance", velocity_tolerance),
+        ("angular_velocity_tolerance", angular_velocity_tolerance),
+        ("settling_window_s", settling_window_s),
+    ):
+        if not math.isfinite(value) or value <= 0.0:
+            raise ValueError(f"{name} must be finite and positive")
+    if isinstance(max_steps, bool) or not isinstance(max_steps, int) or max_steps <= 0:
+        raise ValueError("max_steps must be a positive integer")
+
+    from benchmarks.mujoco_scene import MuJoCoPlant
+    import numpy as np
+
+    config = stopping_plant_config(dt, tau_v)
+    substeps = max(1, int(round(config.dt / config.physics_dt)))
+    sample_period = substeps * config.physics_dt
+    required_quiet_samples = math.ceil(settling_window_s / sample_period) + 1
+    maximum_travel = terminal_travel = maximum_time = None
+    linear_speed = angular_speed = actuator_v = actuator_omega = None
+    completed_steps = attempted_steps = sample_count = quiet_samples = 0
+    elapsed = 0.0
+
+    def result(status: str, reason: str | None = None) -> PlantStoppingMeasurement:
+        return PlantStoppingMeasurement(
+            status=status,
+            reason=reason,
+            maximum_sampled_forward_travel_m=maximum_travel,
+            terminal_forward_travel_m=terminal_travel,
+            maximum_travel_time_s=maximum_time,
+            elapsed_time_s=elapsed,
+            attempted_steps=attempted_steps,
+            completed_steps=completed_steps,
+            sample_count=sample_count,
+            quiet_samples=quiet_samples,
+            required_quiet_samples=required_quiet_samples,
+            terminal_body_linear_speed_m_s=linear_speed,
+            terminal_body_angular_speed_rad_s=angular_speed,
+            terminal_actuator_v_m_s=actuator_v,
+            terminal_actuator_omega_rad_s=actuator_omega,
+        )
+
+    def observe(state):
+        state = np.asarray(state, dtype=float)
+        actuator = np.asarray(plant.actuator_state(), dtype=float)
+        qvel = np.asarray(plant.data.qvel, dtype=float)
+        if state.shape != (5,) or actuator.shape != (2,) or qvel.shape != (6,):
+            raise RuntimeError("unsupported plant state dimensions")
+        for values in (state, actuator, plant.data.qpos, qvel, plant.data.qacc):
+            if not np.all(np.isfinite(values)):
+                raise RuntimeError("non-finite plant or actuator state")
+        if not math.isfinite(float(plant.data.time)):
+            raise RuntimeError("non-finite simulation time")
+        linear = float(np.linalg.norm(qvel[:3]))
+        angular = float(np.linalg.norm(qvel[3:]))
+        if not math.isfinite(linear) or not math.isfinite(angular):
+            raise RuntimeError("non-finite body speed norm")
+        return state, actuator, linear, angular
+
+    try:
+        plant = MuJoCoPlant([], friction=friction, config=config)
+        plant.reset(np.array([0.0, 0.0, 0.0, v0, 0.0], dtype=float))
+        state, actuator, linear_speed, angular_speed = observe(plant.state())
+        actuator_v, actuator_omega = map(float, actuator)
+        initial_x = float(state[0])
+        start_time = float(plant.data.time)
+        maximum_travel = terminal_travel = maximum_time = 0.0
+        sample_count = 1
+        for step in range(max_steps):
+            command = max(0.0, u0 - step * delta_u)
+            attempted_steps = step + 1
+            state, actuator, next_linear_speed, next_angular_speed = observe(
+                plant.step(np.array([command, 0.0], dtype=float))
+            )
+            next_elapsed = float(plant.data.time) - start_time
+            expected_elapsed = attempted_steps * sample_period
+            if not math.isclose(next_elapsed, expected_elapsed, rel_tol=1.0e-9, abs_tol=1.0e-9):
+                raise RuntimeError("simulation time discontinuity or reset")
+            elapsed = next_elapsed
+            completed_steps += 1
+            sample_count += 1
+            terminal_travel = float(state[0]) - initial_x
+            if terminal_travel > maximum_travel:
+                maximum_travel, maximum_time = terminal_travel, elapsed
+            linear_speed, angular_speed = next_linear_speed, next_angular_speed
+            actuator_v, actuator_omega = map(float, actuator)
+            quiet = (
+                command == 0.0
+                and abs(actuator_v) <= velocity_tolerance
+                and abs(actuator_omega) <= angular_velocity_tolerance
+                and linear_speed <= velocity_tolerance
+                and angular_speed <= angular_velocity_tolerance
+                and abs(float(state[3])) <= velocity_tolerance
+                and abs(float(state[4])) <= angular_velocity_tolerance
+            )
+            quiet_samples = quiet_samples + 1 if quiet else 0
+            if quiet_samples >= required_quiet_samples:
+                return result("settled")
+    except RuntimeError as error:
+        return result("invalid", f"{type(error).__name__}: {error}")
+    return result(
+        "not_settled",
+        f"No {settling_window_s:g}s quiet sample window within {max_steps} control steps",
+    )
+
+
 def mujoco_stopping_distance(
     v0: float,
     u0: float,
@@ -173,41 +374,28 @@ def mujoco_stopping_distance(
     tau_v: float,
     *,
     friction: float = 1.0,
-    velocity_tolerance: float = 1.0e-4,
-    max_steps: int = 20_000,
+    velocity_tolerance: float = STOPPING_MEASUREMENT_PROTOCOL.velocity_tolerance,
+    angular_velocity_tolerance: float = STOPPING_MEASUREMENT_PROTOCOL.angular_velocity_tolerance,
+    settling_window_s: float = STOPPING_MEASUREMENT_PROTOCOL.settling_window_s,
+    max_steps: int = STOPPING_MEASUREMENT_PROTOCOL.max_steps,
 ) -> float:
-    """Measure stopping travel in the MuJoCo plant, when MuJoCo is available."""
+    """Return maximum sampled forward travel; fail closed if unsupported.
 
-    _validate_parameters(v0, u0, delta_u, dt, tau_v)
-    if not 0.0 < friction:
-        raise ValueError("friction must be positive")
-    if velocity_tolerance <= 0.0:
-        raise ValueError("velocity_tolerance must be positive")
-    if max_steps <= 0:
-        raise ValueError("max_steps must be positive")
-
-    from benchmarks.mujoco_scene import MuJoCoPlant, MuJoCoPlantConfig
-    import numpy as np
-
-    plant = MuJoCoPlant(
-        [],
+    Use :func:`measure_mujoco_stop` for raw diagnostics and status instead of
+    this scalar compatibility API. Terminal position is never a stop bound.
+    """
+    measurement = measure_mujoco_stop(
+        v0, u0, delta_u, dt, tau_v,
         friction=friction,
-        config=MuJoCoPlantConfig(dt=dt, tau_v=tau_v, tau_omega=tau_v, slip_gain=0.0),
+        velocity_tolerance=velocity_tolerance,
+        angular_velocity_tolerance=angular_velocity_tolerance,
+        settling_window_s=settling_window_s,
+        max_steps=max_steps,
     )
-    plant.reset(np.array([0.0, 0.0, 0.0, v0, 0.0], dtype=float))
-    step = 0
-    zero_command_seen = False
-    state = plant.state()
-    while step < max_steps:
-        command = max(0.0, u0 - step * delta_u)
-        zero_command_seen = zero_command_seen or command <= 0.0
-        state = plant.step(np.array([command, 0.0], dtype=float))
-        step += 1
-        if zero_command_seen and abs(float(state[3])) <= velocity_tolerance:
-            break
-    else:
-        raise RuntimeError("MuJoCo did not reach the stopping tolerance")
-    return float(state[0])
+    if measurement.status != "settled":
+        raise RuntimeError(f"Unsupported stopping measurement ({measurement.status}): {measurement.reason}")
+    assert measurement.maximum_sampled_forward_travel_m is not None
+    return measurement.maximum_sampled_forward_travel_m
 
 
 def evaluate_case(
@@ -323,21 +511,25 @@ def compare_with_mujoco(
     *,
     samples: int,
     friction: float,
-) -> list[dict[str, float | bool]]:
-    """Measure a deterministic prefix of cases in the MuJoCo plant."""
+) -> list[dict[str, object]]:
+    """Measure a prefix; unsupported trials retain status and null comparisons."""
 
     if samples < 0:
         raise ValueError("samples must be nonnegative")
     selected = list(cases)[:samples]
-    comparisons: list[dict[str, float | bool]] = []
+    comparisons: list[dict[str, object]] = []
     for case in selected:
-        measured = mujoco_stopping_distance(
+        measurement = measure_mujoco_stop(
             case.v0,
             case.u0,
             case.delta_u,
             case.dt,
             case.tau_v,
             friction=friction,
+        )
+        measured = (
+            measurement.maximum_sampled_forward_travel_m
+            if measurement.status == "settled" else None
         )
         comparisons.append(
             {
@@ -349,12 +541,19 @@ def compare_with_mujoco(
                 "friction": float(friction),
                 "continuous_distance": case.continuous_distance,
                 "discrete_distance": case.discrete_distance,
-                "mujoco_distance": float(measured),
-                "mujoco_minus_continuous": float(measured - case.continuous_distance),
-                "mujoco_minus_discrete": float(measured - case.discrete_distance),
-                "mujoco_within_discrete_1cm": bool(
-                    abs(measured - case.discrete_distance) <= 0.01
+                "mujoco_distance": measured,
+                "mujoco_minus_continuous": (
+                    measured - case.continuous_distance if measured is not None else None
                 ),
+                "mujoco_minus_discrete": (
+                    measured - case.discrete_distance if measured is not None else None
+                ),
+                "mujoco_within_discrete_1cm": (
+                    abs(measured - case.discrete_distance) <= 0.01 if measured is not None else None
+                ),
+                "plant_config_json": json.dumps(asdict(stopping_plant_config(case.dt, case.tau_v)), sort_keys=True),
+                "obstacle_contact_evidence": "not_measured_empty_obstacle_scene",
+                **{f"measurement_{key}": value for key, value in asdict(measurement).items()},
             }
         )
     return comparisons
@@ -365,7 +564,7 @@ def _write_outputs(
     cases: list[RecoverabilityCase],
     split: str,
     dt: float,
-    mujoco_comparisons: list[dict[str, float | bool]] | None = None,
+    mujoco_comparisons: list[dict[str, object]] | None = None,
 ) -> None:
     output.mkdir(parents=True, exist_ok=True)
     rows = [asdict(case) for case in cases]
@@ -377,8 +576,17 @@ def _write_outputs(
     }
     if mujoco_comparisons is not None:
         payload["mujoco_comparisons"] = mujoco_comparisons
+        payload["mujoco_measurement_protocol"] = {
+            **asdict(STOPPING_MEASUREMENT_PROTOCOL),
+            "sampling": "reset and control interval endpoints",
+            "distance": "maximum sampled forward displacement, not terminal x",
+            "obstacles": [],
+            "unsupported_measurement_count": sum(
+                row["measurement_status"] != "settled" for row in mujoco_comparisons
+            ),
+        }
     (output / "recoverability_gap_validation.json").write_text(
-        json.dumps(payload, indent=2),
+        json.dumps(payload, indent=2, allow_nan=False),
         encoding="utf-8",
     )
     with (output / "recoverability_gap_validation.csv").open(
