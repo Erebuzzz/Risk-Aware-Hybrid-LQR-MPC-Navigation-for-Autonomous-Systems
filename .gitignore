@@ -65,6 +65,7 @@ output.txt
 sim_output.txt
 error.log
 outputs/
+MUJOCO_LOG.TXT
 
 # Scratch and intermediate markdown files
 *PLAN*.md

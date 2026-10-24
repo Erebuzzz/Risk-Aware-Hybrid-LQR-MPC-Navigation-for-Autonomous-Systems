@@ -546,6 +546,8 @@ def run_trial(
             infeasible += 1
 
         state = plant.step(command)
+        actuator_state = plant.actuator_state()
+        contact_count = plant.contact_count
         progress, cte = reference.update_progress(state[:2], progress, forward_window=target_speed * dt * 2.0)
         cte_values.append(cte)
         controls_applied.append(command.copy())
@@ -589,6 +591,17 @@ def run_trial(
                 "command_omega": float(command[1]),
                 "tau_v": float(tau_v),
                 "tau_omega": float(tau_omega),
+                "friction": float(friction),
+                "physics_dt": float(plant.config.physics_dt),
+                "robot_mass": float(plant.config.robot_mass),
+                "gravity_z": float(plant.config.gravity_z),
+                "force_gain": float(plant.config.force_gain),
+                "torque_gain": float(plant.config.torque_gain),
+                "slip_gain": float(plant.config.slip_gain),
+                "actuator_v": float(actuator_state[0]),
+                "actuator_omega": float(actuator_state[1]),
+                # Total contacts include the floor; this is not a collision-event count.
+                "contact_count": float(contact_count),
                 "obstacle_snapshot": obstacle_snapshot,
                 "risk": float(risk),
                 "cvar_risk": float(cvar_risk),
