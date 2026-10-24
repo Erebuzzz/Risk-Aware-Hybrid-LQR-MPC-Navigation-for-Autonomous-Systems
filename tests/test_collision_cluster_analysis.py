@@ -277,6 +277,31 @@ def test_known_monte_carlo_summary_collision_flag_keeps_its_geometric_semantics(
     assert report["boundary_proxy_counts"]["boundary_proxy_nonviolation_count"] == 1
 
 
+def test_updated_monte_carlo_summary_preserves_recorded_obstacle_contact_semantics(
+    tmp_path,
+):
+    payload = {
+        "metadata": {
+            "rvo2_required": True,
+            "collision_flag_semantics": "mujoco_obstacle_contact",
+        },
+        "trials": [
+            {"collision": True, "obstacle_contact_count": 2, "minimum_clearance": -0.1},
+            {"collision": False, "obstacle_contact_count": 0, "minimum_clearance": -0.2},
+        ],
+    }
+    path = tmp_path / "mujoco_contact_summary.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    objects, sources = load_inputs(path)
+    report = analyze_traces(objects, sources=sources)
+
+    assert report["raw_counts"]["collision_count"] == 1
+    assert report["raw_counts"]["noncollision_count"] == 1
+    assert report["raw_counts"]["unknown_outcome_count"] == 0
+    assert report["boundary_proxy_counts"]["boundary_proxy_violation_count"] == 2
+
+
 def test_declared_proxy_flag_does_not_hide_obstacle_specific_contact_evidence():
     report = analyze_traces({
         "metadata": {"collision_flag_semantics": "boundary_proxy"},

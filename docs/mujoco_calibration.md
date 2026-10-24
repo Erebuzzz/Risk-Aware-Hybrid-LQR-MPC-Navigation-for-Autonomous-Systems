@@ -14,11 +14,64 @@
 The Monte Carlo runner samples friction and actuator time constants per trial,
 but it does not identify force transmission or calibrate those values. Its
 traces now retain the simulator configuration, hidden actuator state, and
-contact count so a later measured-log review can distinguish command, actuator,
-and plant effects. `contact_count` is the total `mjData.ncon`, including floor
-contact, from the last dynamics evaluation. It is neither an obstacle-collision
-count nor a maximum over the control interval. `contact_samples` and
-`contact_steps` likewise count samples with any contact, including the floor.
+contact telemetry so a later measured-log review can distinguish command,
+actuator, and plant effects. `contact_count` is the total `mjData.ncon`,
+including floor contact, from the last dynamics evaluation. It is neither an
+obstacle-collision count nor a maximum over the control interval. `contact_samples`
+and `contact_steps` likewise count samples with any contact, including the
+floor.
+
+## Obstacle-specific contact telemetry
+
+`MuJoCoPlant` filters the native contact list to robot-to-named-obstacle pairs;
+floor contacts are never reported as obstacle contacts. Obstacles retain their
+stable `obstacle_<index>` geom names and their input-order indices. Each
+`MuJoCoContactEvent` also preserves MuJoCo's exact `geom1`, `geom2`, `body1`,
+and `body2` names plus the finite contact distance.
+
+The plant exposes two explicit windows:
+
+- `last_step_obstacle_contact_count` and
+  `last_step_obstacle_contact_events` describe the final physics substep of the
+  most recent control interval.
+- `control_interval_obstacle_contact_count` and
+  `control_interval_obstacle_contact_events` retain every obstacle contact
+  point sampled across all physics substeps in that interval. Persistent
+  contact points therefore appear once per substep and are not deduplicated
+  into collision episodes.
+
+The shorter `obstacle_contact_count` and `obstacle_contact_events` fields in a
+Monte Carlo trace refer to the complete control interval so collision summaries
+can use physical static-obstacle contact evidence. The trace also records the
+explicit `last_step_obstacle_contact_*` and
+`obstacle_contact_interval_*` fields. The generic `contact_count` remains raw
+`mjData.ncon` and includes the floor; it must not be used as obstacle-collision
+evidence. A trial's `collision` flag is true only when at least one
+robot-to-static-obstacle contact sample was recorded. Dynamic RVO2 agents are
+controller inputs only and are not MuJoCo contact geoms, so a false `collision`
+flag does not establish whole-scene collision freedom. The separate
+`geometric_collision_proxy` field preserves negative-clearance information
+without relabelling it as physical contact.
+
+To run the deterministic static-obstacle regression harness directly:
+
+```bash
+.venv/bin/python - <<'PY'
+from benchmarks.mujoco_scene import run_static_obstacle_regression
+
+result = run_static_obstacle_regression()
+assert result["straight_hit"]["obstacle_contact_count"] > 0
+assert result["clear_control"]["obstacle_contact_count"] == 0
+print("static obstacle contact regression passed")
+PY
+```
+
+The fixed scene places one `radius=0.10 m` obstacle at `(0.45, 0.0)`, uses the
+existing plant at friction `0.25`, and applies the same straight command in the
+two cases for twenty 50 ms control intervals. The hit case starts at the
+origin; the clear control starts at `y=0.50 m`. This is a deterministic
+telemetry regression, not a controller benchmark or a physical collision
+guarantee.
 
 ## Numerical validity of plant evidence
 
@@ -103,10 +156,12 @@ current repository does not contain a measured actuator/odometry log with those
 fields. In this checkout on **October 24, 2026**, the system `python` executable
 reports **3.11.2**, while the project `.venv/bin/python` reports **3.12.15** and
 is the interpreter used for the Python 3.12 checks below. The native RVO2
-binding is also absent, so the full
-`run_mujoco_monte_carlo.py` path remains unavailable in that container. These
-are explicit blockers; no physical calibration, collision guarantee, or Gate 0
-acceptance is inferred from the synthetic report.
+binding is also absent, so the full dynamic-obstacle
+`run_mujoco_monte_carlo.py` path remains unavailable in that container. The
+static-obstacle contact regression is available locally, but dynamic RVO2
+agents are not MuJoCo contact geoms in the current runner. These are explicit
+blockers; no physical calibration, collision guarantee, or Gate 0 acceptance is
+inferred from the synthetic report.
 
 The runtime and data checks are retained in the report under `preflight` so a
 Python 3.12 environment with a measured log can be re-run without changing the

@@ -6,7 +6,14 @@ import mujoco
 import numpy as np
 import pytest
 
-from benchmarks.mujoco_scene import MuJoCoPlant, MuJoCoPlantConfig, MuJoCoSimulationError
+from benchmarks.mujoco_scene import (
+    MuJoCoPlant,
+    MuJoCoPlantConfig,
+    MuJoCoSimulationError,
+    make_static_obstacle_regression_scene,
+    run_static_obstacle_regression,
+)
+from benchmarks.run_mujoco_monte_carlo import obstacle_contact_telemetry
 
 
 @pytest.mark.parametrize("advance_first", [False, True])
@@ -107,6 +114,62 @@ def test_total_contact_count_includes_floor_without_obstacles():
     for _ in range(10):
         plant.step(np.zeros(2))
     assert plant.contact_count > 0
+    assert plant.last_step_floor_contact_count > 0
+    assert plant.control_interval_floor_contact_count > 0
+    assert plant.obstacle_contact_count == 0
+    assert plant.control_interval_obstacle_contact_count == 0
+    assert plant.obstacle_contact_events == ()
     assert plant.obstacles == []
     assert plant.data.time == pytest.approx(10 * plant.config.dt)
     assert np.all(plant.data.warning.number == 0)
+
+
+def test_static_obstacle_contact_records_exact_names_and_index():
+    obstacles, friction = make_static_obstacle_regression_scene()
+    plant = MuJoCoPlant(obstacles, friction=friction)
+    for _ in range(20):
+        plant.step(np.array([1.0, 0.0]))
+
+    assert plant.contact_count > plant.last_step_obstacle_contact_count
+    assert plant.last_step_obstacle_contact_count > 0
+    assert plant.control_interval_obstacle_contact_count >= plant.last_step_obstacle_contact_count
+    assert plant.last_step_obstacle_contact_events
+    assert plant.control_interval_obstacle_contact_events
+    event = plant.last_step_obstacle_contact_events[0]
+    assert event.obstacle_index == 0
+    assert event.geom1 == "obstacle_0"
+    assert event.geom2 == "robot_body"
+    assert event.body1 == "world"
+    assert event.body2 == "robot"
+    assert event.physics_substep == 25
+    assert np.isfinite(event.distance)
+
+
+def test_static_obstacle_regression_has_hit_and_clear_control_cases():
+    result = run_static_obstacle_regression()
+    hit = result["straight_hit"]
+    clear = result["clear_control"]
+
+    assert hit["collision"] is True
+    assert hit["obstacle_contact_count"] > 0
+    assert hit["obstacle_contact_events"]
+    assert all(event["obstacle_index"] == 0 for event in hit["obstacle_contact_events"])
+    assert clear["collision"] is False
+    assert clear["obstacle_contact_count"] == 0
+    assert clear["obstacle_contact_events"] == []
+
+
+def test_runner_contact_telemetry_uses_obstacle_specific_samples():
+    obstacles, friction = make_static_obstacle_regression_scene()
+    plant = MuJoCoPlant(obstacles, friction=friction)
+    for _ in range(20):
+        plant.step(np.array([1.0, 0.0]))
+
+    telemetry = obstacle_contact_telemetry(plant)
+    assert telemetry["contact_count"] > 0
+    assert telemetry["last_step_obstacle_contact_count"] > 0
+    assert telemetry["obstacle_contact_count"] > 0
+    assert telemetry["obstacle_contact_count"] == telemetry["obstacle_contact_interval_count"]
+    assert telemetry["obstacle_contact_events"]
+    assert telemetry["obstacle_contact_events"][0]["geom1"] == "obstacle_0"
+    assert telemetry["obstacle_contact_events"][0]["body2"] == "robot"

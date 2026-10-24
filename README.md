@@ -153,6 +153,24 @@ cases are evaluation-only; no model correction or threshold is derived from
 them. Use a new `--output` directory for each repeat. See
 `docs/controlled_recoverability.md` for the frozen protocol, results, and limits.
 
+Run the controller-side residual diagnostic against fixed MuJoCo traces:
+
+```bash
+python -m benchmarks.mujoco_residual_calibration \
+  --output Output/Plots/Paper/mujoco_residual_calibration
+```
+
+Run the diagnostic angular-channel plant replay:
+
+```bash
+python -m benchmarks.run_angular_channel_reachability \
+  --output Output/Plots/Paper/angular_channel_reachability
+```
+
+Both utilities keep primary and held-out scenarios separate, record sampled
+plant observations, and explicitly disable automatic safety correction or
+production safety status.
+
 ## ROS 2 Jazzy with Docker
 
 Docker is the supported ROS 2 setup. The image builds both active packages:
@@ -236,8 +254,11 @@ python benchmarks/run_mujoco_monte_carlo.py \
 ```
 
 Benchmark trace files include pre-action state, previous and applied commands,
-requested commands, obstacle snapshots, clearances, solver status, actuator
-time constants, and fallback state.
+requested commands, obstacle snapshots, generic floor-inclusive contacts,
+obstacle-specific contact events, geometric-clearance proxies, solver status,
+actuator time constants, and fallback state. The runner's physical collision
+flag is scoped to static MuJoCo obstacle geoms; dynamic RVO2-agent contact is
+not measured by the current plant.
 
 ## Documentation and research scope
 
@@ -246,6 +267,8 @@ time constants, and fallback state.
 - `docs/REFERENCES.md`: project bibliography.
 - `docs/controlled_recoverability.md`: controlled stopping protocol and measured results.
 - `docs/mujoco_calibration.md`: synthetic identification and numerical-validity checks.
+- `docs/mujoco_residual_calibration.md`: reduced-model residual identification and held-out envelope checks.
+- `docs/angular_channel_reachability.md`: two-sided angular-channel plant replay and contact semantics.
 - `docs/collision_cluster_analysis.md`: recorded outcomes and separate boundary proxies.
 - `benchmarks/README.md`: benchmark-specific commands and output schema.
 - `report/report.tex`: historical implementation and evaluation report.
@@ -267,12 +290,15 @@ not interchangeable.
 controlled stopping sweep, synthetic identification diagnostics, and clustered
 reporting are available. All 768 primary and 162 held-out stopping cases completed
 with numerical-validity guards enabled. The discrete-model boundary disagreed
-with the measured proxy in 264 primary and 83 held-out cases. Simulator-model
-mismatch calibration, validated sampled-data corrections, obstacle-contact
-evaluation, and the angular-channel plant gate remain open. Recovering known
-parameters from the same simulator does not calibrate the reduced controller
-model against the plant. These results do not validate a safety correction or
-backup policy.
+with the measured proxy in 264 primary and 83 held-out cases. The reduced-model
+residual diagnostic reports nonzero sampled velocity mismatch and three held-out
+angular-velocity envelope violations. The angular-channel replay observed three
+primary and one held-out selected-side obstacle contacts, with zero finite
+no-contact plane crossings. Simulator-model mismatch calibration, validated
+sampled-data corrections, dynamic-agent contact evaluation, and a frozen
+evaluation of the resulting method remain open. Recovering known parameters from
+the same simulator does not calibrate the reduced controller model against the
+plant. These results do not validate a safety correction or backup policy.
 
 Provisional Docker Build Cloud CI and ROS 2 experiment tooling is described in
 `docs/docker_build_cloud.md` and `docs/option_b_experiment_guide.md`. It captures

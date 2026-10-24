@@ -1,10 +1,10 @@
-"""Headless MuJoCo plant for friction and actuator-lag validation."""
+"""Headless MuJoCo plant for friction, actuator-lag, and contact validation."""
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Any, Sequence
 
 import mujoco
 import numpy as np
@@ -60,6 +60,51 @@ class MuJoCoPlantConfig:
             raise ValueError("robot dimensions must be positive")
         if self.slip_gain < 0.0:
             raise ValueError("slip_gain must be nonnegative")
+
+
+@dataclass(frozen=True)
+class MuJoCoContactEvent:
+    """One robot-to-static-obstacle contact record from MuJoCo.
+
+    MuJoCo can expose more than one contact point for the same pair of geoms.
+    Each contact point is retained as one event so the telemetry never turns
+    ``mjData.ncon`` into a guessed collision episode count.  ``physics_substep``
+    is one-based within the control interval and is ``None`` for callers that
+    construct an event outside a running plant.
+    """
+
+    obstacle_index: int
+    geom1: str
+    geom2: str
+    body1: str
+    body2: str
+    distance: float
+    physics_substep: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.obstacle_index < 0:
+            raise ValueError("obstacle_index must be nonnegative")
+        if not self.geom1 or not self.geom2 or not self.body1 or not self.body2:
+            raise ValueError("contact geom and body names must not be empty")
+        if not np.isfinite(self.distance):
+            raise ValueError("contact distance must be finite")
+        if self.physics_substep is not None and self.physics_substep <= 0:
+            raise ValueError("physics_substep must be positive when provided")
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return JSON-safe telemetry without changing MuJoCo's names."""
+
+        return {
+            "obstacle_index": int(self.obstacle_index),
+            "geom1": self.geom1,
+            "geom2": self.geom2,
+            "body1": self.body1,
+            "body2": self.body2,
+            "distance": float(self.distance),
+            "physics_substep": (
+                None if self.physics_substep is None else int(self.physics_substep)
+            ),
+        }
 
 
 def build_scene_xml(
@@ -124,11 +169,24 @@ class MuJoCoPlant:
         self.model.opt.timestep = self.config.physics_dt
         self.data = mujoco.MjData(self.model)
         self.robot_body_id = self.model.body("robot").id
+        self.robot_geom_ids = {
+            int(geom_id)
+            for geom_id in range(self.model.ngeom)
+            if int(self.model.geom_bodyid[geom_id]) == int(self.robot_body_id)
+        }
         self.floor_geom_id = self.model.geom("floor").id
+        self.obstacle_geom_ids = {
+            int(self.model.geom(f"obstacle_{index}").id): index
+            for index in range(len(obstacles))
+        }
         self.obstacles = list(obstacles)
         self.friction = float(friction)
         self.v_actual = 0.0
         self.omega_actual = 0.0
+        self._last_step_obstacle_contact_events: tuple[MuJoCoContactEvent, ...] = ()
+        self._control_interval_obstacle_contact_events: tuple[MuJoCoContactEvent, ...] = ()
+        self._last_step_floor_contact_count = 0
+        self._control_interval_floor_contact_count = 0
         self.reset()
 
     def reset(self, state: np.ndarray | None = None) -> None:
@@ -138,6 +196,7 @@ class MuJoCoPlant:
         mujoco.mj_resetData(self.model, self.data)
         self._expected_time = 0.0
         self._simulation_error: str | None = None
+        self._clear_contact_telemetry()
         self.data.qpos[0] = x[0]
         self.data.qpos[1] = x[1]
         self.data.qpos[2] = 0.16
@@ -178,6 +237,74 @@ class MuJoCoPlant:
 
         return int(self.data.ncon)
 
+    @property
+    def last_step_obstacle_contact_events(self) -> tuple[MuJoCoContactEvent, ...]:
+        """Return robot-to-obstacle contact records from the last physics step."""
+
+        return self._last_step_obstacle_contact_events
+
+    @property
+    def last_step_obstacle_contact_count(self) -> int:
+        """Return obstacle contact records from the last physics step only."""
+
+        return len(self._last_step_obstacle_contact_events)
+
+    @property
+    def obstacle_contact_events(self) -> tuple[MuJoCoContactEvent, ...]:
+        """Short alias for :attr:`last_step_obstacle_contact_events`."""
+
+        return self.last_step_obstacle_contact_events
+
+    @property
+    def obstacle_contact_count(self) -> int:
+        """Short alias for the last-physics-step obstacle contact count.
+
+        This deliberately differs from :attr:`contact_count`, which is generic
+        ``mjData.ncon`` and therefore includes floor contacts.
+        """
+
+        return self.last_step_obstacle_contact_count
+
+    @property
+    def control_interval_obstacle_contact_events(self) -> tuple[MuJoCoContactEvent, ...]:
+        """Return all obstacle contact records across the last control interval.
+
+        Records are not deduplicated: persistent contact points appear once per
+        physics substep, with ``physics_substep`` identifying their sample.
+        """
+
+        return self._control_interval_obstacle_contact_events
+
+    @property
+    def control_interval_obstacle_contact_count(self) -> int:
+        """Return obstacle contact records sampled across the last interval."""
+
+        return len(self._control_interval_obstacle_contact_events)
+
+    @property
+    def obstacle_contact_interval_events(self) -> tuple[MuJoCoContactEvent, ...]:
+        """Alias for :attr:`control_interval_obstacle_contact_events`."""
+
+        return self.control_interval_obstacle_contact_events
+
+    @property
+    def obstacle_contact_interval_count(self) -> int:
+        """Alias for :attr:`control_interval_obstacle_contact_count`."""
+
+        return self.control_interval_obstacle_contact_count
+
+    @property
+    def last_step_floor_contact_count(self) -> int:
+        """Return robot-floor contact points from the last physics step."""
+
+        return int(self._last_step_floor_contact_count)
+
+    @property
+    def control_interval_floor_contact_count(self) -> int:
+        """Return robot-floor contact samples across the last interval."""
+
+        return int(self._control_interval_floor_contact_count)
+
     def step(self, command: np.ndarray) -> np.ndarray:
         """Advance a control interval, rejecting invalid physics immediately.
 
@@ -197,6 +324,10 @@ class MuJoCoPlant:
             if not np.all(np.isfinite(command)):
                 raise ValueError("command must be finite")
             self._validate_physics(self._expected_time, "before control step")
+            self._last_step_obstacle_contact_events = ()
+            self._control_interval_obstacle_contact_events = ()
+            self._last_step_floor_contact_count = 0
+            self._control_interval_floor_contact_count = 0
             self.v_actual = self._lag(
                 self.v_actual, command[0], self.config.tau_v, self.config.dt
             )
@@ -227,15 +358,84 @@ class MuJoCoPlant:
                 mujoco.mj_step(self.model, self.data)
                 self._validate_physics(expected_time, f"after physics substep {substep + 1}")
                 self._expected_time = expected_time
+                obstacle_events = self._read_obstacle_contact_events(substep + 1)
+                self._last_step_obstacle_contact_events = obstacle_events
+                self._control_interval_obstacle_contact_events += obstacle_events
+                floor_contacts = self._count_floor_contact_points()
+                self._last_step_floor_contact_count = floor_contacts
+                self._control_interval_floor_contact_count += floor_contacts
             return self.state()
         except (mujoco.FatalError, mujoco.UnexpectedError) as exc:
             self._simulation_error = f"native MuJoCo step failed: {exc}"
+            self._clear_contact_telemetry()
             raise MuJoCoSimulationError(self._simulation_error) from exc
         except RuntimeError as exc:
             self._simulation_error = str(exc)
+            self._clear_contact_telemetry()
             raise
         finally:
             self.data.xfrc_applied[self.robot_body_id, :] = 0.0
+
+    def _read_obstacle_contact_events(
+        self, physics_substep: int
+    ) -> tuple[MuJoCoContactEvent, ...]:
+        """Extract robot-to-obstacle contact records from the current ``mjData``."""
+
+        events: list[MuJoCoContactEvent] = []
+        for contact_index in range(int(self.data.ncon)):
+            contact = self.data.contact[contact_index]
+            geom1 = int(contact.geom1)
+            geom2 = int(contact.geom2)
+            obstacle_index: int | None = None
+            if geom1 in self.obstacle_geom_ids and geom2 in self.robot_geom_ids:
+                obstacle_index = self.obstacle_geom_ids[geom1]
+            elif geom2 in self.obstacle_geom_ids and geom1 in self.robot_geom_ids:
+                obstacle_index = self.obstacle_geom_ids[geom2]
+            if obstacle_index is None:
+                continue
+            distance = float(contact.dist)
+            if not np.isfinite(distance):
+                raise MuJoCoSimulationError(
+                    "nonfinite obstacle contact distance at physics substep "
+                    f"{physics_substep}: contact index {contact_index}"
+                )
+            body1 = int(self.model.geom_bodyid[geom1])
+            body2 = int(self.model.geom_bodyid[geom2])
+            events.append(
+                MuJoCoContactEvent(
+                    obstacle_index=obstacle_index,
+                    geom1=str(self.model.geom(geom1).name),
+                    geom2=str(self.model.geom(geom2).name),
+                    body1=str(self.model.body(body1).name),
+                    body2=str(self.model.body(body2).name),
+                    distance=distance,
+                    physics_substep=physics_substep,
+                )
+            )
+        return tuple(events)
+
+    def _count_floor_contact_points(self) -> int:
+        """Count robot-floor contact points without using generic ``ncon``."""
+
+        count = 0
+        for contact_index in range(int(self.data.ncon)):
+            contact = self.data.contact[contact_index]
+            geom1 = int(contact.geom1)
+            geom2 = int(contact.geom2)
+            if (
+                (geom1 == self.floor_geom_id and geom2 in self.robot_geom_ids)
+                or (geom2 == self.floor_geom_id and geom1 in self.robot_geom_ids)
+            ):
+                count += 1
+        return count
+
+    def _clear_contact_telemetry(self) -> None:
+        """Discard partial contact records after a failed numerical step."""
+
+        self._last_step_obstacle_contact_events = ()
+        self._control_interval_obstacle_contact_events = ()
+        self._last_step_floor_contact_count = 0
+        self._control_interval_floor_contact_count = 0
 
     def _validate_physics(self, expected_time: float, phase: str) -> None:
         """Check numerical evidence without changing MuJoCo's integration."""
@@ -271,6 +471,9 @@ class MuJoCoPlant:
         ):
             if not np.all(np.isfinite(getattr(self.data, name))):
                 errors.append(f"nonfinite {name}")
+        for contact_index in range(int(self.data.ncon)):
+            if not math.isfinite(float(self.data.contact[contact_index].dist)):
+                errors.append(f"nonfinite contact distance at index {contact_index}")
         if not math.isfinite(self.v_actual) or not math.isfinite(self.omega_actual):
             errors.append("nonfinite actuator state")
         if errors:
@@ -291,3 +494,60 @@ class MuJoCoPlant:
     def _quaternion_to_yaw(quaternion: np.ndarray) -> float:
         w, x, y, z = quaternion
         return float(np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)))
+
+
+def make_static_obstacle_regression_scene() -> tuple[list[dict[str, float]], float]:
+    """Return the fixed scene used by the obstacle-contact regression harness.
+
+    The scene intentionally keeps the existing plant geometry and dynamics
+    unchanged.  At friction ``0.25`` a straight command from the origin reaches
+    the obstacle within twenty 50 ms control intervals, while the same command
+    from ``y=0.50`` is a spatially separated control case.
+    """
+
+    return ([{"x": 0.45, "y": 0.0, "radius": 0.10}], 0.25)
+
+
+def run_static_obstacle_regression(*, steps: int = 20) -> dict[str, Any]:
+    """Run deterministic straight-hit and spatially-clear contact cases.
+
+    The returned event records preserve MuJoCo's exact geom/body names and the
+    obstacle index.  Counts are contact-point samples, not deduplicated
+    collision episodes.  This helper is a regression harness only; it does not
+    tune a controller or modify the physics model.
+    """
+
+    if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
+        raise ValueError("steps must be a positive integer")
+    obstacles, friction = make_static_obstacle_regression_scene()
+    command = np.array([1.0, 0.0], dtype=float)
+
+    def rollout(initial_state: Sequence[float]) -> dict[str, Any]:
+        plant = MuJoCoPlant(obstacles, friction=friction)
+        plant.reset(np.asarray(initial_state, dtype=float))
+        states: list[np.ndarray] = []
+        for _ in range(steps):
+            states.append(plant.step(command).copy())
+        return {
+            "states": np.asarray(states, dtype=float).tolist(),
+            "collision": bool(plant.control_interval_obstacle_contact_count > 0),
+            "last_step_obstacle_contact_count": int(
+                plant.last_step_obstacle_contact_count
+            ),
+            "obstacle_contact_count": int(
+                plant.control_interval_obstacle_contact_count
+            ),
+            "obstacle_contact_events": [
+                event.as_dict() for event in plant.control_interval_obstacle_contact_events
+            ],
+            "contact_count": int(plant.contact_count),
+        }
+
+    return {
+        "obstacles": [dict(obstacle) for obstacle in obstacles],
+        "friction": float(friction),
+        "steps": int(steps),
+        "command": command.tolist(),
+        "straight_hit": rollout((0.0, 0.0, 0.0, 0.0, 0.0)),
+        "clear_control": rollout((0.0, 0.50, 0.0, 0.0, 0.0)),
+    }

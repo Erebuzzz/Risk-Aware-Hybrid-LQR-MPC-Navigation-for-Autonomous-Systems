@@ -484,7 +484,7 @@ def _evidence_note(evidence_role: str, split: str) -> list[str]:
         "Missing or partially missing collision telemetry is retained as unknown; it is never counted as a non-collision unless a full-run declaration supplies the outcome.",
         "Clearance, plant_proxy_safe, and legacy plant_safe are boundary proxies, not observed physical collisions. Analytical safe flags never establish physical outcomes.",
         "Generic contact_count includes floor contacts and is never used as obstacle-contact evidence.",
-        "The MuJoCo/RVO2 summary collision flag is derived from clearance; recognized summaries retain this boundary-proxy meaning. Other explicit flags retain the producer's declared semantics.",
+        "Legacy MuJoCo/RVO2 summaries without an explicit collision semantics declaration retain their clearance-derived boundary-proxy meaning. Summaries declaring mujoco_obstacle_contact retain recorded static-obstacle contact semantics; other explicit flags retain the producer's declared semantics.",
         "Features share one pre-action tick. Outcome-dependent first-event/maximum selection is descriptive, not predictor performance or causal evidence.",
         "Counts describe trials, not independent ticks or collision-event totals. Rates exclude unknown outcomes and do not establish Gate 0 acceptance.",
     ])
@@ -703,9 +703,14 @@ def _objects_from_payload(payload: Any, source: str) -> tuple[list[Any], list[st
     if not isinstance(metadata, Mapping):
         raise ValueError(f"{source}: metadata must be an object")
     inherited = dict(metadata)
-    if containers[0] == "trials" and metadata.get("rvo2_required") is True:
-        # The existing runner defines TrialMetrics.collision as min(clearances)
-        # < 0, not a contact measurement. Preserve that known producer contract.
+    if (
+        containers[0] == "trials"
+        and metadata.get("rvo2_required") is True
+        and not metadata.get("collision_flag_semantics")
+    ):
+        # Legacy summaries define TrialMetrics.collision from clearance rather
+        # than contact telemetry. Preserve that contract only when the producer
+        # did not publish a newer explicit semantics declaration.
         inherited["collision_flag_semantics"] = "boundary_proxy"
     if payload.get("split") is not None:
         inherited["split"] = payload["split"]

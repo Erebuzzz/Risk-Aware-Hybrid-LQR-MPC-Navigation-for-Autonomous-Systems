@@ -177,9 +177,12 @@ travel is not an intersample or infinite-tail bound. See
 
 Trace files from `run_mujoco_monte_carlo.py` now include pre-action state,
 previous applied command, requested command, applied command, obstacle snapshot,
-pre-step and post-step clearance, actuator time constants, solver status, and
-fallback state. The legacy `command_v` and `command_omega` fields remain for
-plot compatibility.
+pre-step and post-step clearance, generic floor-inclusive contacts,
+obstacle-specific contact events, geometric-clearance proxies, actuator time
+constants, solver status, and fallback state. The physical collision flag is
+scoped to static MuJoCo obstacle geoms; dynamic RVO2-agent contact is not
+measured by the current plant. The legacy `command_v` and `command_omega` fields
+remain for plot compatibility.
 
 ## Footprint contracts
 
@@ -221,6 +224,46 @@ uses frozen cluster edges and does not tune thresholds from held-out outcomes.
 Use `--evidence primary_controlled` only for a deterministic controlled source;
 the report keeps this label separate from exploratory logged analysis. See
 `docs/collision_cluster_analysis.md` for input fields and output semantics.
+
+## Reduced-model residual diagnostic
+
+The separate `mujoco_residual_calibration` utility keeps the controller-side
+`AugmentedDifferentialDriveModel` fixed and fits only a small additive residual
+basis against free-space MuJoCo endpoint traces. It is distinct from the
+same-plant parameter recovery helper. The fit uses two primary probes, evaluates
+two disjoint held-out probes, and builds a primary-only sampled residual
+envelope. It never applies that envelope to the safety filter:
+
+```bash
+python -m benchmarks.mujoco_residual_calibration \
+  --output Output/Plots/Paper/mujoco_residual_calibration
+```
+
+The current deterministic run reports primary linear-velocity RMSE `0.062486`
+m/s, held-out linear-velocity RMSE `0.042429` m/s, and three held-out samples
+outside the primary angular-velocity envelope. The envelope is an endpoint
+diagnostic, not an intersample or collision bound. See
+`docs/mujoco_residual_calibration.md`.
+
+## Angular-channel plant diagnostic
+
+The fixed-seed `run_angular_channel_reachability` utility evaluates the unchanged
+two-sided angular-channel decision and replays both turn signs against one
+static MuJoCo obstacle per scenario. Controller trigger predictions, hidden
+actuator reachability, yaw/position outcomes, and obstacle-specific contact
+telemetry remain separate:
+
+```bash
+python -m benchmarks.run_angular_channel_reachability \
+  --output Output/Plots/Paper/angular_channel_reachability
+```
+
+The October 24, 2026 run used 24 primary and 12 held-out scenarios. It observed
+three primary and one held-out selected-side obstacle contacts, and no finite
+no-contact obstacle-plane crossings. This is open-loop diagnostic evidence only;
+the decision is not connected to production safety status. Contact is sampled at
+control-interval endpoints and does not rule out intersample contact. See
+`docs/angular_channel_reachability.md`.
 
 ## Gate 1 ROS 2 human-validation report
 

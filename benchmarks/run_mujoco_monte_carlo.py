@@ -41,7 +41,11 @@ from hybrid_controller.models.augmented_dynamics import (
 from hybrid_controller.models.footprint import MUJOCO_ROBOT_RADIUS
 from hybrid_controller.trajectory.spatial_reference import SpatialFigure8Reference
 
-from benchmarks.mujoco_scene import MuJoCoPlant, MuJoCoPlantConfig
+from benchmarks.mujoco_scene import (
+    MuJoCoContactEvent,
+    MuJoCoPlant,
+    MuJoCoPlantConfig,
+)
 from benchmarks.rvo2_adapter import RVO2DynamicWorld, RVOAgentState
 
 
@@ -79,6 +83,9 @@ class TrialMetrics:
     infeasible_count: int
     fallback_count: int
     steps: int
+    obstacle_contact_count: int = 0
+    obstacle_contact_intervals: int = 0
+    geometric_collision_proxy: bool = False
 
 
 def wrap_angle(value: float) -> float:
@@ -251,6 +258,44 @@ def serialize_obstacle_snapshot(obstacles: Sequence[Any]) -> str:
     return json.dumps(snapshot, sort_keys=True, separators=(",", ":"))
 
 
+def serialize_contact_events(
+    events: Sequence[MuJoCoContactEvent],
+) -> list[dict[str, Any]]:
+    """Serialize exact MuJoCo contact names and obstacle indices for traces."""
+
+    return [event.as_dict() for event in events]
+
+
+def obstacle_contact_telemetry(plant: MuJoCoPlant) -> dict[str, Any]:
+    """Return generic, last-step, and control-interval contact telemetry.
+
+    ``contact_count`` remains the raw ``mjData.ncon`` from the last physics
+    evaluation and includes floor contacts.  The obstacle-specific fields are
+    filtered to robot-to-named-obstacle contacts.  Interval counts/events are
+    contact-point samples across all physics substeps; they are not deduplicated
+    collision episodes.
+    """
+
+    last_step_events = serialize_contact_events(plant.last_step_obstacle_contact_events)
+    interval_events = serialize_contact_events(plant.control_interval_obstacle_contact_events)
+    interval_count = int(plant.control_interval_obstacle_contact_count)
+    return {
+        "contact_count": int(plant.contact_count),
+        "last_step_floor_contact_count": int(plant.last_step_floor_contact_count),
+        "control_interval_floor_contact_count": int(
+            plant.control_interval_floor_contact_count
+        ),
+        "last_step_obstacle_contact_count": int(plant.last_step_obstacle_contact_count),
+        "last_step_obstacle_contact_events": last_step_events,
+        # The short fields are the physical obstacle-contact evidence used by
+        # collision summaries: they cover the complete control interval.
+        "obstacle_contact_count": interval_count,
+        "obstacle_contact_events": interval_events,
+        "obstacle_contact_interval_count": interval_count,
+        "obstacle_contact_interval_events": interval_events,
+    }
+
+
 def make_reference_window(reference: SpatialFigure8Reference, progress: float, speed: float, dt: float, horizon: int):
     states = []
     controls = []
@@ -327,7 +372,7 @@ def run_trial(
     slack_fallback_threshold: float = 0.05,
     risk_horizon: int | None = None,
     max_obstacles: int = 8,
-) -> tuple[TrialMetrics, list[dict[str, float | bool | str]]]:
+) -> tuple[TrialMetrics, list[dict[str, Any]]]:
     rng = np.random.default_rng(seed)
     friction = (
         float(friction_override)
@@ -393,10 +438,12 @@ def run_trial(
     intervention_norms: list[float] = []
     cvar_risks: list[float] = []
     slack_values: list[float] = []
-    trace: list[dict[str, float | bool | str]] = []
+    trace: list[dict[str, Any]] = []
     interventions = 0
     infeasible = 0
     fallbacks = 0
+    obstacle_contact_count = 0
+    obstacle_contact_intervals = 0
     previous_command = np.zeros(2, dtype=float)
     fallback_active = False
     steps = max(1, int(round(duration / dt)))
@@ -547,7 +594,12 @@ def run_trial(
 
         state = plant.step(command)
         actuator_state = plant.actuator_state()
-        contact_count = plant.contact_count
+        contact_telemetry = obstacle_contact_telemetry(plant)
+        interval_obstacle_contacts = int(
+            contact_telemetry["obstacle_contact_interval_count"]
+        )
+        obstacle_contact_count += interval_obstacle_contacts
+        obstacle_contact_intervals += int(interval_obstacle_contacts > 0)
         progress, cte = reference.update_progress(state[:2], progress, forward_window=target_speed * dt * 2.0)
         cte_values.append(cte)
         controls_applied.append(command.copy())
@@ -600,8 +652,10 @@ def run_trial(
                 "slip_gain": float(plant.config.slip_gain),
                 "actuator_v": float(actuator_state[0]),
                 "actuator_omega": float(actuator_state[1]),
-                # Total contacts include the floor; this is not a collision-event count.
-                "contact_count": float(contact_count),
+                # Generic contact_count includes the floor and is not collision
+                # evidence. Obstacle-specific fields below are the physical
+                # contact telemetry used by TrialMetrics.collision.
+                **contact_telemetry,
                 "obstacle_snapshot": obstacle_snapshot,
                 "risk": float(risk),
                 "cvar_risk": float(cvar_risk),
@@ -612,6 +666,7 @@ def run_trial(
                 "pre_step_clearance": float(pre_step_clearance),
                 "post_step_clearance": float(post_step_clearance),
                 "minimum_clearance": float(post_step_clearance),
+                 "geometric_collision_proxy": bool(post_step_clearance < 0.0),
                 "intervention_norm": intervention_norm,
                 "latency_ms": float(latency_values[-1]),
                 "slack_max": current_slack,
@@ -634,7 +689,8 @@ def run_trial(
     else:
         angular_jerk_rms = 0.0
     latency_array = np.asarray(latency_values, dtype=float)
-    collision = bool(min(clearances) < 0.0) if clearances else False
+    collision = bool(obstacle_contact_count > 0)
+    geometric_collision_proxy = bool(any(value < 0.0 for value in clearances))
     result = TrialMetrics(
         mode=mode,
         seed=seed,
@@ -642,6 +698,8 @@ def run_trial(
         tau_v=tau_v,
         tau_omega=tau_omega,
         collision=collision,
+        obstacle_contact_count=obstacle_contact_count,
+        obstacle_contact_intervals=obstacle_contact_intervals,
         minimum_clearance=float(min(clearances)) if clearances else float("inf"),
         rms_cross_track_error=float(np.sqrt(np.mean(np.asarray(cte_values) ** 2))),
         angular_jerk_rms=angular_jerk_rms,
@@ -658,6 +716,7 @@ def run_trial(
         infeasible_count=infeasible,
         fallback_count=fallbacks,
         steps=steps,
+        geometric_collision_proxy=geometric_collision_proxy,
     )
     return result, trace
 
@@ -666,6 +725,10 @@ def aggregate(metrics: Sequence[TrialMetrics]) -> dict[str, dict[str, float]]:
     result: dict[str, dict[str, float]] = {}
     metric_names = (
         "collision_rate",
+        "obstacle_contact_count",
+        "obstacle_contact_intervals",
+        "static_obstacle_contact_rate",
+        "geometric_collision_proxy_rate",
         "minimum_clearance",
         "rms_cross_track_error",
         "angular_jerk_rms",
@@ -684,6 +747,18 @@ def aggregate(metrics: Sequence[TrialMetrics]) -> dict[str, dict[str, float]]:
         group = [item for item in metrics if item.mode == mode]
         values: dict[str, np.ndarray] = {
             "collision_rate": np.asarray([item.collision for item in group], dtype=float),
+            "obstacle_contact_count": np.asarray(
+                [item.obstacle_contact_count for item in group], dtype=float
+            ),
+            "obstacle_contact_intervals": np.asarray(
+                [item.obstacle_contact_intervals for item in group], dtype=float
+            ),
+            "static_obstacle_contact_rate": np.asarray(
+                [item.collision for item in group], dtype=float
+            ),
+            "geometric_collision_proxy_rate": np.asarray(
+                [item.geometric_collision_proxy for item in group], dtype=float
+            ),
             "minimum_clearance": np.asarray([item.minimum_clearance for item in group]),
             "rms_cross_track_error": np.asarray(
                 [item.rms_cross_track_error for item in group]
@@ -804,6 +879,20 @@ def main() -> None:
             "seed": args.seed,
             "trace_seed": args.trace_seed,
             "rvo2_required": True,
+            "collision_flag_semantics": "mujoco_obstacle_contact",
+            "collision_scope": "static_mujoco_obstacle_geoms_only",
+            "dynamic_agent_contact_evidence": (
+                "not_measured; dynamic RVO2 agents are controller inputs and "
+                "are not MuJoCo contact geoms"
+            ),
+            "geometric_collision_proxy_semantics": (
+                "minimum_clearance_below_zero over static and dynamic obstacle "
+                "snapshots; not a physical collision outcome"
+            ),
+            "contact_telemetry_semantics": (
+                "contact_count_is_last_step_mjData_ncon_including_floor; "
+                "obstacle_contact_count_is_control_interval_robot_to_named_obstacle_samples"
+            ),
         },
         "aggregate": aggregate(records),
         "trials": [asdict(item) for item in records],

@@ -49,11 +49,16 @@ override a recorded collision/non-collision. In particular:
   `contact_count` includes floor contacts and is ignored for physical outcomes,
   even when zero. Without explicit obstacle-contact/collision telemetry, its
   physical outcome is unknown and its clearance remains a proxy.
-- The existing MuJoCo/RVO2 **summary** computes `collision` from clearance.
-  Summaries identified by `metadata.rvo2_required: true` and `trials` retain that
-  proxy meaning. Other producers can declare
+- Legacy MuJoCo/RVO2 summaries that omit a semantics declaration compute
+  `collision` from clearance. Such summaries retain that proxy meaning even when
+  `metadata.rvo2_required: true`. The updated runner declares
+  `metadata.collision_flag_semantics: "mujoco_obstacle_contact"` and its
+  `collision` field is based on recorded static-obstacle contact samples. The
+  scope is `static_mujoco_obstacle_geoms_only`; dynamic RVO2 agents are not
+  MuJoCo contact geoms, so a false static-contact flag does not establish
+  whole-scene collision freedom. Their negative geometric clearance remains a
+  separate proxy. Other producers can declare
   `metadata.collision_flag_semantics: "boundary_proxy"` for geometric flags.
-  Explicit obstacle-contact measurements still supply recorded outcomes.
 - Analytical and generic safety flags (`state_only_safe`, `continuous_safe`,
   `discrete_safe`, `safe`, `physical_safe`) never establish physical outcomes.
   Other explicit collision declarations are reported as supplied; the utility
