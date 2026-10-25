@@ -45,12 +45,12 @@ docker-build:
 
 docker-test: docker-build
 	ROS_IMAGE_JAZZY="$(ROS_IMAGE_JAZZY)" \
-		docker compose --profile ci run --rm --no-deps --no-build --pull never -T ci
+		docker compose --profile ci run --rm --no-deps --pull never -T ci
 
 docker-experiment: docker-build
 	ROS_IMAGE_JAZZY="$(ROS_IMAGE_JAZZY)" \
 	EXPERIMENT_DURATION_SECONDS="$(EXPERIMENT_DURATION_SECONDS)" \
-		docker compose --profile experiment run --rm --no-deps --no-build --pull never -T experiment
+		docker compose --profile experiment run --rm --no-deps --pull never -T experiment
 
 ros2-build:
 	source /opt/ros/$(ROS_DISTRO)/setup.bash && \

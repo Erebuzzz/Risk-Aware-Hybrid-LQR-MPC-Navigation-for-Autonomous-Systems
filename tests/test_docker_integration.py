@@ -150,9 +150,18 @@ def test_make_build_loads_the_same_image_run_by_compose(
         assert command["image"] == "example:gate1"
         assert command["args"] == [
             "compose", "--profile", service, "run", "--rm", "--no-deps",
-            "--no-build", "--pull", "never", "-T", service,
+            "--pull", "never", "-T", service,
         ]
     assert experiment["duration"] == "12"
+
+
+def test_ci_workflow_uses_run_flags_supported_by_compose(command_env: dict[str, str]) -> None:
+    del command_env
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "docker compose --profile ci run --rm --no-deps --pull never -T ci" in workflow
+    assert "docker compose --profile experiment run --rm --no-deps --pull never -T experiment" in workflow
+    assert "docker compose --profile ci run --rm --no-deps --no-build" not in workflow
+    assert "docker compose --profile experiment run --rm --no-deps --no-build" not in workflow
 
 
 def test_compose_config_when_docker_is_available() -> None:

@@ -45,8 +45,8 @@ Enable RViz/Gazebo clients explicitly on a display-configured host by passing
 To reuse an already built image, without rebuilding:
 
 ```bash
-docker compose --profile ci run --rm --no-deps --no-build --pull never -T ci
-docker compose --profile experiment run --rm --no-deps --no-build --pull never -T experiment
+docker compose --profile ci run --rm --no-deps --pull never -T ci
+docker compose --profile experiment run --rm --no-deps --pull never -T experiment
 ```
 
 ## Optional remote builder
