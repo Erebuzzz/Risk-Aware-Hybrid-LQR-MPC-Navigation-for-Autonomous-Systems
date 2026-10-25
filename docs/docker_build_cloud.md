@@ -37,6 +37,10 @@ path. Previous runs are retained. Artifacts persist on the host:
 - `Output/Gate1/run_<id>/plots/`: validation figures and `gate1_validation_report.md`.
 - `Output/Gate1/run_<id>/ros_logs/`: ROS launch diagnostics.
 
+CI creates `Output/Gate1` before starting Compose and restores ownership after
+the experiment, including failed runs. This keeps the bind-mounted evidence
+readable by `actions/upload-artifact` when the container runs as root.
+
 The Compose `experiment` service needs no display or host-network access.
 For the existing interactive simulation use `docker compose up jazzy`.
 Enable RViz/Gazebo clients explicitly on a display-configured host by passing

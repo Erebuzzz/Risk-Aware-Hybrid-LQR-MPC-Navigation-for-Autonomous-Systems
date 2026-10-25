@@ -84,7 +84,8 @@ docker compose run --rm -v "$PWD/Output:/ros2_ws/Output" jazzy \
 ```
 
 The runner explicitly disables RViz and the Gazebo graphical client, isolates
-DDS discovery with `ROS_LOCALHOST_ONLY=1` and `ROS_DOMAIN_ID=42`, and uses a
+DDS discovery with `ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST`, an empty
+`ROS_STATIC_PEERS`, and `ROS_DOMAIN_ID=42`, and uses a
 private Gazebo transport partition. `--seed` sets both Gazebo's seed and the
 command-distortion node's seed. Numerical libraries run with one thread.
 Use distinct `--ros-domain-id` values for concurrent runs.

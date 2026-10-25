@@ -287,7 +287,11 @@ def run_ros2_experiment(config: Gate1Config) -> RunArtifacts:
     env["PYTHONHASHSEED"] = str(config.python_hash_seed)
     env["ROS_DOMAIN_ID"] = str(config.ros_domain_id)
     env["RCUTILS_COLORIZED_OUTPUT"] = "0"
-    env["ROS_LOCALHOST_ONLY"] = "1" if config.ros_localhost_only else "0"
+    # ROS_LOCALHOST_ONLY is deprecated in Jazzy. Use the discovery-range
+    # variables so headless runs remain isolated without emitting a warning.
+    env.pop("ROS_LOCALHOST_ONLY", None)
+    env["ROS_AUTOMATIC_DISCOVERY_RANGE"] = "LOCALHOST" if config.ros_localhost_only else "SUBNET"
+    env["ROS_STATIC_PEERS"] = ""
     env["ROS_LOG_DIR"] = str(output_dir / "ros_logs")
     env["GZ_PARTITION"] = f"hybrid_nav_gate1_{os.getpid()}"
     env["OMP_NUM_THREADS"] = "1"
@@ -302,7 +306,7 @@ def run_ros2_experiment(config: Gate1Config) -> RunArtifacts:
     capture: dict[str, Any] = {}
     inputs: dict[str, Any] = {}
     previous_env = {key: os.environ.get(key) for key in env if key in {
-        "ROS_DOMAIN_ID", "ROS_LOCALHOST_ONLY", "ROS_LOG_DIR",
+        "ROS_DOMAIN_ID", "ROS_AUTOMATIC_DISCOVERY_RANGE", "ROS_STATIC_PEERS", "ROS_LOG_DIR",
     }}
     previous_sigterm = signal.getsignal(signal.SIGTERM)
 
@@ -805,7 +809,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--allow-network-discovery",
         action="store_true",
-        help="Do not set ROS_LOCALHOST_ONLY=1 (headless default keeps it isolated).",
+        help="Use subnet discovery instead of LOCALHOST discovery.",
     )
     parser.add_argument("--obstacle-scenario", default="crossing")
     parser.add_argument(

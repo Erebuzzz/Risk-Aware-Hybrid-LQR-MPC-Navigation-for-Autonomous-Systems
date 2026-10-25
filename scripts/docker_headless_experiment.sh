@@ -4,6 +4,21 @@ set -Eeuo pipefail
 
 mkdir -p Output/Gate1
 run_dir="$(mktemp -d Output/Gate1/run_XXXXXXXX)"
+
+# The Compose service normally runs as root inside the image, while the
+# repository checkout and GitHub artifact uploader run as the host user. Keep
+# the run readable after both successful and failed experiments. The host
+# Output directory is created before Compose in CI, so its uid:gid is the
+# correct ownership target for the bind-mounted tree.
+artifact_owner="$(stat -c '%u:%g' Output 2>/dev/null || true)"
+restore_artifact_ownership() {
+    if [[ -n "${artifact_owner}" && -d "${run_dir}" ]]; then
+        chown -R "${artifact_owner}" "${run_dir}" 2>/dev/null || true
+        chmod -R u+rwX,go+rX "${run_dir}" 2>/dev/null || true
+    fi
+}
+trap restore_artifact_ownership EXIT
+
 printf 'Experiment artifacts: %s\n' "${run_dir}"
 
 run_status=0

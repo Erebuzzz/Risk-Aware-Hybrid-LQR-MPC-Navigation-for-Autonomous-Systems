@@ -193,6 +193,16 @@ def test_capture_uses_sim_time_after_readiness_and_detects_stale_streams() -> No
     assert state.clock_regressions == 1
 
 
+def test_startup_clock_reset_is_recorded_but_not_a_runtime_regression() -> None:
+    state = CaptureState()
+    state.record("/clock", {"clock": {"sec": 5, "nanosec": 0}}, 0.0)
+    state.record("/clock", {"clock": {"sec": 0, "nanosec": 0}}, 0.1)
+
+    assert state.clock_regressions == 0
+    assert state.startup_clock_regressions == 1
+    assert state.summary()["startup_clock_regression_count"] == 1
+
+
 def test_raw_ros_capture_preserves_nonfinite_evidence_as_strict_json() -> None:
     message = {"data": [1.0, float("nan"), float("inf")]}
     assert nonfinite_paths(message) == ["message.data[1]", "message.data[2]"]

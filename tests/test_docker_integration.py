@@ -162,6 +162,16 @@ def test_ci_workflow_uses_run_flags_supported_by_compose(command_env: dict[str, 
     assert "docker compose --profile experiment run --rm --no-deps --pull never -T experiment" in workflow
     assert "docker compose --profile ci run --rm --no-deps --no-build" not in workflow
     assert "docker compose --profile experiment run --rm --no-deps --no-build" not in workflow
+    assert "mkdir -p Output/Gate1" in workflow
+    assert "Restore Gate 1 artifact ownership" in workflow
+
+
+def test_compose_uses_non_deprecated_ros_discovery_environment() -> None:
+    compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+
+    assert "ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST" in compose
+    assert 'ROS_STATIC_PEERS: ""' in compose
+    assert "ROS_LOCALHOST_ONLY" not in compose
 
 
 def test_compose_config_when_docker_is_available() -> None:

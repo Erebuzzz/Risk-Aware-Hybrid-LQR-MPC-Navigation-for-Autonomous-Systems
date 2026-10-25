@@ -67,6 +67,7 @@ class CaptureState:
         self.nonfinite_messages = 0
         self.failed_modes = 0
         self.clock_regressions = 0
+        self.startup_clock_regressions = 0
 
     def record(self, topic: str, message: dict[str, Any], wall_s: float) -> list[str]:
         self.counts[topic] += 1
@@ -77,7 +78,15 @@ class CaptureState:
             clock = message["clock"]
             value = clock["sec"] + clock["nanosec"] * 1e-9
             if self.clock_s is not None and value < self.clock_s:
-                self.clock_regressions += 1
+                # Gazebo can publish an initial clock and then reset it while
+                # the launch graph is still becoming ready. That startup
+                # transition is not a run-time regression. Once all required
+                # streams have been observed and start_clock_s is latched,
+                # regressions remain fatal evidence.
+                if self.start_clock_s is None:
+                    self.startup_clock_regressions += 1
+                else:
+                    self.clock_regressions += 1
             self.clock_s = value
             if self.first_clock_s is None:
                 self.first_clock_s = value
@@ -120,6 +129,7 @@ class CaptureState:
             "nonfinite_message_count": self.nonfinite_messages,
             "failed_mode_count": self.failed_modes,
             "clock_regression_count": self.clock_regressions,
+            "startup_clock_regression_count": self.startup_clock_regressions,
         }
 
 

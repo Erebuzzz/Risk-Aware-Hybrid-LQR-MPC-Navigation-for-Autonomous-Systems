@@ -65,10 +65,16 @@ class LQRRiskPredictor:
         predicted_states = self.rollout(x0, controls, theta_hat)
 
         if not obstacles:
+            # ``inf`` is mathematically convenient for an empty obstacle set,
+            # but it cannot cross the Gate 1 telemetry boundary because ROS
+            # Float32 and the strict report validator require finite values.
+            # The trigger distance is a finite positive sentinel, not a
+            # measured clearance. ``risk_score=0`` and ``safe=True`` retain the
+            # actual no-obstacle semantics.
             return RolloutRisk(
                 safe=True,
                 risk_score=0.0,
-                min_margin=float("inf"),
+                min_margin=float(self.d_trigger),
                 nearest_obstacle_id=-1,
                 first_violation_step=-1,
                 predicted_states=predicted_states,

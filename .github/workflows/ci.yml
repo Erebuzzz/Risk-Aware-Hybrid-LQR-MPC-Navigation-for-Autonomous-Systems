@@ -112,12 +112,19 @@ jobs:
           tags: risk-aware-hybrid:ci
           load: true
 
+      - name: Prepare writable Gate 1 output directory
+        run: mkdir -p Output/Gate1
+
       - name: Test the ROS 2 workspace
         run: docker compose --profile ci run --rm --no-deps --pull never -T ci
 
       - name: Run the headless Gate 1 experiment and report
         timeout-minutes: 5
         run: docker compose --profile experiment run --rm --no-deps --pull never -T experiment
+
+      - name: Restore Gate 1 artifact ownership
+        if: always()
+        run: sudo chown -R "$(id -u):$(id -g)" Output/Gate1 2>/dev/null || true
 
       - name: Retain Gate 1 evidence, including failed runs
         if: always()

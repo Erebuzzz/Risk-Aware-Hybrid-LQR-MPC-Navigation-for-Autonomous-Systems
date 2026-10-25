@@ -14,6 +14,7 @@ from hybrid_controller.controllers.riccati_safety_filter import (
     SafetyFilterConfig,
     SafetyFilterSolution,
 )
+from hybrid_controller.controllers.risk_predictor import LQRRiskPredictor
 
 
 def test_proposition_one_convex_blend_remains_barrier_violating():
@@ -39,6 +40,21 @@ def test_cvar_gate_detects_penetration_with_uncertainty_padding():
     assert not result.safe
     assert result.first_violation_step == 0
     assert result.maximum_risk > 0.0
+
+
+def test_empty_risk_rollout_uses_finite_no_obstacle_margin_sentinel():
+    predictor = LQRRiskPredictor(d_trigger=0.75)
+    result = predictor.assess(
+        np.zeros(3),
+        np.zeros((predictor.horizon, 2)),
+        np.ones(2),
+        obstacles=[],
+    )
+
+    assert result.safe
+    assert result.risk_score == 0.0
+    assert result.min_margin == 0.75
+    assert np.isfinite(result.min_margin)
 
 
 def test_risk_hysteresis_has_distinct_entry_and_exit_thresholds():
